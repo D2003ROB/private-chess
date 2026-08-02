@@ -7,6 +7,9 @@ Postgres.
 engine. What it does prove is one thin vertical slice — create and list game records — that
 exercises every layer end to end.
 
+Working in this repository — as a person or an agent? Start with [AGENTS.md](./AGENTS.md): the
+architecture, the invariants worth not breaking, and what is deliberately absent.
+
 ## Prerequisites
 
 | Tool    | Version  | Notes                                           |
