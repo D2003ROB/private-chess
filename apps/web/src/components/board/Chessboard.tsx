@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
+import { Piece } from '../pieces';
 import { getTheme, DEFAULT_THEME_ID } from './themes';
-import type { ChessboardProps, CoordinateMode, Orientation, SquareColor } from './types';
+import type { ChessboardProps, CoordinateMode, Orientation, Square, SquareColor } from './types';
 import './Chessboard.css';
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] as const;
@@ -21,7 +22,9 @@ function squareAt(row: number, column: number, orientation: Orientation) {
   return {
     fileIndex,
     rankIndex,
-    name: `${FILES[fileIndex]}${RANKS[rankIndex]}`,
+    // Both indices are derived from a 0-7 grid position, so the pair is always
+    // a real square name.
+    name: `${FILES[fileIndex]}${RANKS[rankIndex]}` as Square,
     // a1 (0,0) is dark and h1 (7,0) is light, so an even sum is a dark square.
     color: ((fileIndex + rankIndex) % 2 === 0 ? 'dark' : 'light') satisfies SquareColor,
   };
@@ -42,6 +45,8 @@ export function Chessboard({
   coordinates = 'inside',
   size,
   className,
+  pieces,
+  pieceSet,
   children,
 }: ChessboardProps) {
   const activeTheme = getTheme(theme);
@@ -100,7 +105,30 @@ export function Chessboard({
           </div>
         ))}
 
-        <div className="chessboard__overlay">{children}</div>
+        <div className="chessboard__overlay">
+          {pieces
+            ? cells.map((cell) => {
+                const piece = pieces[cell.name];
+                if (!piece) return null;
+                return (
+                  <div
+                    key={cell.name}
+                    className="chessboard__piece"
+                    // Positioned by grid cell rather than placed in flow, so
+                    // changing the piece map never reflows the board.
+                    style={{ left: `${cell.column * 12.5}%`, top: `${cell.row * 12.5}%` }}
+                  >
+                    <Piece
+                      type={piece.type}
+                      color={piece.color}
+                      {...(pieceSet ? { set: pieceSet } : {})}
+                    />
+                  </div>
+                );
+              })
+            : null}
+          {children}
+        </div>
       </div>
 
       {coordinates === 'outside' ? (
