@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# env — only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# test / tooling output
+coverage/
+.vite/
+*.log
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/

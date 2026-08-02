@@ -1,0 +1,132 @@
+# private-chess
+
+A full-stack skeleton for a chess application: a React UI talking to a Fastify API talking to
+Postgres.
+
+**This repository currently contains plumbing, not chess.** There are no rules, no board, and no
+engine. What it does prove is one thin vertical slice — create and list game records — that
+exercises every layer end to end.
+
+## Prerequisites
+
+| Tool    | Version  | Notes                                           |
+| ------- | -------- | ----------------------------------------------- |
+| Node.js | ≥ 20 LTS | Verified on 22.x                                |
+| pnpm    | ≥ 9      | `corepack enable pnpm` or `npm i -g pnpm`       |
+| Docker  | any      | Only used to run Postgres 16 via Docker Compose |
+
+## Quickstart
+
+```bash
+# 1. clone and enter the repository
+git clone <repo-url> private-chess && cd private-chess
+
+# 2. install every workspace's dependencies
+pnpm install
+
+# 3. copy the env examples (defaults work as-is for local development)
+cp .env.example .env
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
+
+# 4. start Postgres and wait for it to report healthy
+pnpm db:up
+
+# 5. apply the committed migration to the fresh database
+pnpm db:migrate
+
+# 6. start the API (:3000) and the web app (:5173)
+pnpm dev
+```
+
+Then open <http://localhost:5173>. You should see the games page with an empty state; submitting
+the form creates a game and the list refreshes on its own.
+
+## Scripts
+
+Run these from the repository root.
+
+| Script              | What it does                                                              |
+| ------------------- | ------------------------------------------------------------------------- |
+| `pnpm dev`          | Builds `@chess/shared`, then runs the API and web dev servers in parallel |
+| `pnpm build`        | Builds every workspace in dependency order                                |
+| `pnpm test`         | Runs Vitest in every workspace (no database required)                     |
+| `pnpm typecheck`    | `tsc --noEmit` across every workspace, tests included                     |
+| `pnpm lint`         | ESLint over the whole repository                                          |
+| `pnpm lint:fix`     | ESLint with `--fix`                                                       |
+| `pnpm format`       | Prettier write                                                            |
+| `pnpm format:check` | Prettier check                                                            |
+| `pnpm db:up`        | Starts the Postgres container and waits for its healthcheck               |
+| `pnpm db:down`      | Stops the Postgres container                                              |
+| `pnpm db:migrate`   | Applies committed migrations (`prisma migrate deploy`)                    |
+| `pnpm db:studio`    | Opens Prisma Studio on :5555                                              |
+| `pnpm db:generate`  | Regenerates the Prisma client                                             |
+
+To create a new migration after editing `schema.prisma`:
+
+```bash
+pnpm --filter @chess/api db:migrate:dev --name <migration-name>
+```
+
+## Project layout
+
+```
+.
+├── apps/
+│   ├── api/                    # Fastify 5 + Prisma
+│   │   ├── prisma/
+│   │   │   ├── schema.prisma   # Game model + GameStatus enum
+│   │   │   └── migrations/     # committed; never use `db push`
+│   │   ├── src/
+│   │   │   ├── app.ts          # buildApp() — wiring only, does not listen
+│   │   │   ├── db.ts           # the narrow Database interface + Prisma impl
+│   │   │   ├── env.ts          # Zod-validated environment
+│   │   │   ├── server.ts       # entrypoint: builds the app and listens
+│   │   │   └── routes/         # health.ts, games.ts
+│   │   └── test/               # Fastify inject tests against an in-memory db
+│   └── web/                    # React 19 + Vite + TanStack Query
+│       └── src/
+│           ├── api/client.ts   # typed fetch wrapper, parses with shared Zod
+│           ├── pages/          # GamesPage.tsx and its test
+│           ├── App.tsx         # QueryClientProvider root
+│           └── main.tsx
+├── packages/
+│   └── shared/                 # Zod schemas + inferred types, used by both apps
+└── docker-compose.yml          # Postgres 16
+```
+
+`@chess/shared` is compiled to `dist/` with type declarations, so `pnpm -r build` builds it before
+the apps that depend on it. During development `pnpm dev` builds it once up front; if you edit a
+schema while the dev servers are running, rebuild it with
+`pnpm --filter @chess/shared build` (or run that package's `dev` script for watch mode).
+
+## API
+
+| Method | Path             | Response                                             |
+| ------ | ---------------- | ---------------------------------------------------- |
+| GET    | `/health`        | `200 {status,db,uptime}`, or `503` with `db: "down"` |
+| GET    | `/api/games`     | `200` — games, newest first                          |
+| POST   | `/api/games`     | `201` with the created game, `400` on invalid input  |
+| GET    | `/api/games/:id` | `200` with the game, `404` if unknown                |
+
+Every non-2xx response uses the same envelope: `{ error, message, details? }`.
+
+The Vite dev server proxies `/api` and `/health` to `http://localhost:3000`, so the browser only
+ever talks to `:5173` and there is no CORS involved in development.
+
+## Configuration
+
+Environment variables are documented in the `.env.example` files — root (Postgres container),
+`apps/api/.env.example`, and `apps/web/.env.example`. Real `.env` files are gitignored and must
+never be committed. The API validates its environment at boot and exits with a readable message if
+something is missing.
+
+## Tests
+
+```bash
+pnpm test
+```
+
+Tests need no database and no Docker. The API tests build the real Fastify app via `buildApp()` and
+drive it with `app.inject()`, passing an in-memory implementation of the `Database` interface — so
+routes, Zod validation, status codes, and serialization are all exercised without infrastructure.

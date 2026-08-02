@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GameStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+}
+
+/// A game record. This ticket delivers plumbing only, so the model carries no
+/// board state, moves, or rules — just enough to prove the vertical slice.
+model Game {
+  id          String     @id @default(cuid())
+  whitePlayer String
+  blackPlayer String
+  status      GameStatus @default(PENDING)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([createdAt])
+}
