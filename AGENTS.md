@@ -12,9 +12,13 @@ Last verified against commit: the CHESS-1 skeleton.
 
 A full-stack skeleton for a chess application: React UI → Fastify API → Postgres.
 
-**There is no chess in it yet.** No rules, no legal-move generation, no board, no engine, no
-authentication, no websockets. What exists is one thin vertical slice — create and list game
-records — that proves every layer is wired together. Delivered by ticket CHESS-1.
+**There is still no chess in it.** No rules, no legal-move generation, no pieces, no engine, no
+authentication, no websockets. What exists is:
+
+- a thin vertical slice — create and list game records — proving every layer is wired together
+  (CHESS-1);
+- a presentational chessboard at `/board`: squares, coordinates and 10 themes, holding no game
+  state and knowing nothing about pieces (CHESS-2).
 
 Treat that as deliberate. If a task asks you to add chess logic, it is new work under a new
 ticket, not a gap to quietly fill.
@@ -31,6 +35,7 @@ These were chosen by ticket and must not be substituted without an explicit deci
 | API framework    | Fastify 5                            |
 | Web framework    | React 19 + Vite 7                    |
 | Data fetching    | TanStack Query v5                    |
+| Routing          | react-router-dom 7                   |
 | Database         | PostgreSQL 16, via Docker Compose    |
 | ORM / migrations | Prisma 6                             |
 | Validation       | Zod 4, shared between API and web    |
@@ -67,12 +72,18 @@ library. The styling is intentionally plain CSS in one stylesheet.
 │       ├── vite.config.ts        # dev server :5173, /api + /health proxy, vitest config
 │       └── src/
 │           ├── main.tsx          # mounts <App/>
-│           ├── App.tsx           # QueryClientProvider root
+│           ├── App.tsx           # QueryClientProvider + router + nav
 │           ├── api/client.ts     # typed fetch wrapper + ApiError
-│           ├── pages/GamesPage.tsx        # the only page
-│           ├── pages/GamesPage.test.tsx
+│           ├── components/board/ # the chessboard (see §4a)
+│           │   ├── Chessboard.tsx
+│           │   ├── Chessboard.css
+│           │   ├── themes.ts     # the 10-theme registry
+│           │   ├── types.ts      # BoardTheme + component props
+│           │   └── index.ts      # public exports
+│           ├── pages/GamesPage.tsx         # route /
+│           ├── pages/BoardPage.tsx         # route /board — board demo + picker
 │           ├── test/setup.ts     # jest-dom + cleanup
-│           └── styles.css        # all styling
+│           └── styles.css        # global styles + site nav
 ├── packages/
 │   └── shared/src/
 │       ├── game.ts               # game + create-input schemas, GameStatus
@@ -125,6 +136,34 @@ change there is a change to the API contract. Never duplicate a schema on one si
    must be documented in the example with a safe placeholder.
 8. **`/health` must never crash or hang when the database is down.** It catches, logs, and returns
    `503` with `db: "down"`.
+
+### 4a. The chessboard (CHESS-2)
+
+`components/board/` renders squares, coordinates and theme colours. It is purely presentational:
+it holds no state, knows nothing about pieces or rules, and makes no API calls. Its rules:
+
+- **`a1` is dark, `h1` is light.** Colour is `(fileIndex + rankIndex) % 2 === 0 → dark`, computed
+  once in `squareAt()`. If the board ever looks inverted, fix that mapping — never CSS
+  `nth-child` selectors downstream.
+- **`orientation` reverses render order only.** `data-square="a1"` is always a1, whichever way the
+  board faces. Bottom-left is `a1` for white and `h8` for black.
+- **Themes are five CSS custom properties** (`--board-light`, `--board-dark`,
+  `--board-light-coord`, `--board-dark-coord`, `--board-border`) set on the board root from the
+  active theme object. Squares get their colour from `[data-color]` attribute selectors — never a
+  per-theme class, a conditional class string, or a per-square inline colour. Adding an eleventh
+  theme means editing `themes.ts` and nothing else.
+- **Do not name a grid area that the active layout does not declare.** `grid-area: board` is scoped
+  to `[data-coordinates='outside']`; applied unconditionally it creates implicit tracks and
+  displaces the board. Likewise, the outside gutters use content-sized tracks — a `1fr` row cannot
+  resolve an aspect-ratio-derived height and the board overflows it.
+- **Labels size in `cqw`** against the board's own container, so they scale with the board and
+  never with the viewport.
+- **The `children` overlay layer exists for pieces** to mount into later. Keep it.
+
+Coordinate labels intentionally fail WCAG 4.5:1 in 9 of 10 themes — the opposite-square rule puts
+them at roughly 2–3.5:1 by construction. They are decorative (squares are `aria-hidden`, the board
+root is a single `role="img"`), and the measured table is in the CHESS-2 PR. Do not "fix" the
+contrast without deciding to change the visual design.
 
 ## 5. Commands
 
@@ -194,16 +233,25 @@ Do not rediscover these:
   `tsconfig.json` (used by `build`) emits only `src/`.
 - The API reads `apps/api/.env` itself via `process.loadEnvFile` in `server.ts`, resolved relative
   to the module so it works identically from `src` (tsx) and `dist` (node).
+- Board layout bugs are usually grid-sizing, not colour: see the two traps in §4a
+  (unmatched `grid-area` names, and `1fr` tracks around an aspect-ratio box).
+- jsdom does not implement container queries or `getComputedStyle` for CSS custom properties as a
+  browser does. Assert board geometry and theme application in a real browser, not in Vitest —
+  the component tests deliberately check DOM structure and attributes only.
 
 ## 9. Not implemented — separate tickets
 
-Chess rules and move validation · board rendering and piece graphics · any chess engine or library
-(`chess.js`, Stockfish) · authentication, users, sessions · WebSockets and real-time updates ·
-matchmaking, lobbies, clocks, ratings · CI pipelines, app Dockerfiles, deployment config · visual
-design, theming, component libraries.
+Chess rules and move validation · pieces of any kind (glyphs, SVGs, piece sets) · FEN parsing or
+rendering a position · click, drag, drop, selection or highlight behaviour on the board · any chess
+engine or library (`chess.js`, Stockfish) · authentication, users, sessions · WebSockets and
+real-time updates · matchmaking, lobbies, clocks, ratings · CI pipelines, app Dockerfiles,
+deployment config · sound · component libraries.
 
 `GameStatus` already has `PENDING | ACTIVE | COMPLETED` and games carry two player names; that is
 the extent of the domain modelling. Extend it deliberately, with a migration.
+
+Piece-set theming, when it lands, should reuse the theme-registry pattern in
+`components/board/themes.ts` rather than inventing a second mechanism.
 
 ## 10. Keeping this file honest
 

@@ -1,0 +1,106 @@
+/* The board is the subject here; everything around it stays quiet. */
+
+.board-page {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+
+.board-page__header h1 {
+  margin: 0 0 0.25rem;
+}
+
+.board-page__subtitle {
+  margin: 0;
+  color: var(--muted);
+}
+
+.board-page__board {
+  width: min(90vw, 600px);
+  margin: 2rem auto 1.25rem;
+}
+
+.board-page__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.board-page__value {
+  opacity: 0.75;
+  font-variant: small-caps;
+}
+
+.board-page__themes {
+  margin-top: 2.5rem;
+}
+
+.board-page__themes h2 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.5rem;
+  background: #fff;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* Selected state is a ring plus a check, never colour alone — several themes
+   sit close together in hue. */
+.swatch[aria-pressed='true'] {
+  border-color: #1a1a1a;
+  box-shadow: 0 0 0 2px #1a1a1a;
+}
+
+.swatch:focus-visible {
+  outline: 3px solid #0b63d6;
+  outline-offset: 2px;
+}
+
+.swatch__preview {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  width: 3.25rem;
+  aspect-ratio: 1;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.swatch__check {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 3px rgb(0 0 0 / 70%);
+}
+
+.swatch__name {
+  font-size: 0.75rem;
+  text-align: center;
+  line-height: 1.2;
+}
