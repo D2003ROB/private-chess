@@ -18,7 +18,9 @@ authentication, no websockets. What exists is:
 - a thin vertical slice — create and list game records — proving every layer is wired together
   (CHESS-1);
 - a presentational chessboard at `/board`: squares, coordinates and 10 themes, holding no game
-  state and knowing nothing about pieces (CHESS-2).
+  state (CHESS-2);
+- the Meridian piece set — twelve vector pieces drawn from scratch — rendered on the board from a
+  static `STARTING_LAYOUT` map (CHESS-3). Nothing moves.
 
 Treat that as deliberate. If a task asks you to add chess logic, it is new work under a new
 ticket, not a gap to quietly fill.
@@ -78,8 +80,15 @@ library. The styling is intentionally plain CSS in one stylesheet.
 │           │   ├── Chessboard.tsx
 │           │   ├── Chessboard.css
 │           │   ├── themes.ts     # the 10-theme registry
-│           │   ├── types.ts      # BoardTheme + component props
+│           │   ├── types.ts      # BoardTheme, Square, component props
 │           │   └── index.ts      # public exports
+│           ├── components/pieces/ # the piece set (see §4b)
+│           │   ├── sets/meridian/ # 12 components + manifest + README
+│           │   ├── Piece.tsx     # dispatcher — never draws
+│           │   ├── pieceSets.ts  # registry, mirrors themes.ts
+│           │   ├── startingLayout.ts
+│           │   ├── types.ts
+│           │   └── index.ts
 │           ├── pages/GamesPage.tsx         # route /
 │           ├── pages/BoardPage.tsx         # route /board — board demo + picker
 │           ├── test/setup.ts     # jest-dom + cleanup
@@ -165,6 +174,35 @@ them at roughly 2–3.5:1 by construction. They are decorative (squares are `ari
 root is a single `role="img"`), and the measured table is in the CHESS-2 PR. Do not "fix" the
 contrast without deciding to change the visual design.
 
+### 4b. The piece set (CHESS-3)
+
+`components/pieces/` holds twelve SVG components and a dispatcher. Still no chess logic: pieces are
+placed from a static map and nothing moves.
+
+- **The twelve set components are the only place path data lives.** `Piece.tsx` dispatches on
+  (set, colour, type) and draws nothing. If you find yourself adding a `<path>` outside
+  `sets/*/`, stop.
+- **Colour comes only from `--piece-white-fill` / `--piece-white-stroke` / `--piece-black-fill` /
+  `--piece-black-stroke`**, never a literal. A test enforces this by walking every `fill`/`stroke`
+  attribute, so a hardcoded hex fails the suite rather than shipping.
+- **Black pieces are not white pieces with swapped fills.** Interior seams are redrawn as light
+  strokes on black pieces; a dark seam on a dark fill is invisible.
+- **The height ladder is load-bearing** (pawn 24 → king 38 from the `y = 40` baseline) and is
+  verified by measuring rendered geometry, not by eye. A queen that reads as a bishop is a broken
+  set.
+- **Knights face the viewer's left in both colours.** The artwork is never mirrored — flipping the
+  board moves pieces between cells and leaves every path untouched.
+- Pieces render into the board's overlay layer, positioned by grid cell, so a change to the piece
+  map cannot reflow the squares.
+
+`sets/meridian/README.md` records provenance (original work, no third-party licence) and the
+drawing rules. Read it before touching the artwork.
+
+Black pieces on **Midnight** and **Neon** are carried by their light interior seams, not by their
+silhouette: with the specified defaults the black outline scores 1.03–2.91:1 against those squares.
+Raised in the CHESS-3 PR. Per-theme piece tinting is a deliberate non-decision — do not add it
+without a ticket.
+
 ## 5. Commands
 
 Run from the repository root.
@@ -241,17 +279,19 @@ Do not rediscover these:
 
 ## 9. Not implemented — separate tickets
 
-Chess rules and move validation · pieces of any kind (glyphs, SVGs, piece sets) · FEN parsing or
-rendering a position · click, drag, drop, selection or highlight behaviour on the board · any chess
-engine or library (`chess.js`, Stockfish) · authentication, users, sessions · WebSockets and
-real-time updates · matchmaking, lobbies, clocks, ratings · CI pipelines, app Dockerfiles,
-deployment config · sound · component libraries.
+Chess rules and move validation · FEN parsing or loading an arbitrary position · click, drag, drop,
+selection or highlight behaviour · legal-move highlights, last-move or check indicators, arrows ·
+any chess engine or library (`chess.js`, Stockfish) · additional piece sets (the registry is built
+for them; do not fill it) · captured-piece trays and material counters · piece shadows, 3D, board
+perspective · authentication, users, sessions · WebSockets and real-time updates · matchmaking,
+lobbies, clocks, ratings · CI pipelines, app Dockerfiles, deployment config · sound · component
+libraries.
 
 `GameStatus` already has `PENDING | ACTIVE | COMPLETED` and games carry two player names; that is
 the extent of the domain modelling. Extend it deliberately, with a migration.
 
-Piece-set theming, when it lands, should reuse the theme-registry pattern in
-`components/board/themes.ts` rather than inventing a second mechanism.
+`STARTING_LAYOUT` is a literal, not parser output. When FEN parsing arrives it should produce the
+same `PiecePlacement` shape rather than replacing it.
 
 ## 10. Keeping this file honest
 

@@ -9,11 +9,18 @@ import {
   type CoordinateMode,
   type Orientation,
 } from '../components/board';
+import { Piece, STARTING_LAYOUT, type PieceColor, type PieceType } from '../components/pieces';
 import './BoardPage.css';
 
 const PREFS_KEY = 'chess:board-prefs';
 
 const COORDINATE_MODES: CoordinateMode[] = ['inside', 'outside', 'none'];
+
+// King first, pawn last — the same order as the height ladder, so the contact
+// sheet reads as a ruler as well as an inventory.
+const CONTACT_SHEET_TYPES: PieceType[] = ['k', 'q', 'r', 'b', 'n', 'p'];
+const CONTACT_SHEET_COLORS: PieceColor[] = ['w', 'b'];
+const CONTACT_SHEET_SIZES = [24, 48, 96];
 
 // UI preferences, not game state. Parsed defensively so a stale or hand-edited
 // localStorage entry falls back to defaults instead of breaking the page.
@@ -85,6 +92,7 @@ export function BoardPage() {
           theme={prefs.theme}
           orientation={prefs.orientation}
           coordinates={prefs.coordinates}
+          pieces={STARTING_LAYOUT}
         />
       </div>
 
@@ -124,6 +132,39 @@ export function BoardPage() {
           })}
         </ul>
       </section>
+
+      <ContactSheet />
     </main>
+  );
+}
+
+/**
+ * The review artefact for the piece set. A set that only holds together at
+ * 96px is not finished, so every size is shown at once rather than behind a
+ * control someone has to think to use.
+ */
+function ContactSheet() {
+  return (
+    <section className="board-page__contact" aria-labelledby="contact-heading">
+      <h2 id="contact-heading">Piece set — Meridian</h2>
+      {CONTACT_SHEET_SIZES.map((size) => (
+        <div key={size} className="contact">
+          <p className="contact__size">{size}px</p>
+          <div className="contact__grid">
+            {CONTACT_SHEET_COLORS.map((color) =>
+              CONTACT_SHEET_TYPES.map((type) => (
+                <span
+                  key={`${color}${type}`}
+                  className="contact__cell"
+                  style={{ width: size, height: size }}
+                >
+                  <Piece type={type} color={color} />
+                </span>
+              )),
+            )}
+          </div>
+        </div>
+      ))}
+    </section>
   );
 }

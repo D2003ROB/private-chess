@@ -60,11 +60,28 @@
   background-color: var(--board-dark);
 }
 
-/* The overlay layer pieces will mount into. Empty for now. */
+/* The layer pieces mount into. Never in flow, so a piece change cannot reflow
+   the squares underneath. */
 .chessboard__overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+.chessboard__piece {
+  position: absolute;
+  width: 12.5%;
+  height: 12.5%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.chessboard__piece > svg {
+  /* Pieces sit a little inside the square so adjacent bases do not touch. */
+  width: 88%;
+  height: 88%;
+  overflow: visible;
 }
 
 .chessboard__label {
