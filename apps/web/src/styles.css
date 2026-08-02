@@ -27,6 +27,25 @@ body {
   padding: 2rem 1rem 4rem;
 }
 
+.site-nav {
+  display: flex;
+  gap: 1rem;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1rem 1rem 0;
+}
+
+.site-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.site-nav a.active {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
 .page__header h1 {
   margin: 0 0 0.25rem;
 }

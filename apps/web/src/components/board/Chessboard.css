@@ -1,0 +1,147 @@
+/*
+ * All colour comes from five custom properties set on `.chessboard` by the
+ * component. Nothing here names a theme, and no square carries a colour of its
+ * own — swapping themes is those five values changing.
+ */
+
+.chessboard {
+  display: grid;
+  width: var(--board-size, 100%);
+  max-width: 100%;
+}
+
+/*
+ * Gutter tracks are content-sized, never fractional: the board's height comes
+ * from its aspect ratio, which a `1fr` row would have to resolve before it
+ * knows the column width — and it overflows the row when it can't.
+ */
+.chessboard[data-coordinates='outside'] {
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    'ranks board'
+    '.     files';
+  /* Makes the gutter labels size from the board, not the viewport. */
+  container-type: inline-size;
+}
+
+/*
+ * Only the outside layout defines these areas. Naming an area that the active
+ * template does not declare creates implicit tracks and displaces the board,
+ * so the assignment is scoped rather than set on the board unconditionally.
+ */
+.chessboard[data-coordinates='outside'] .chessboard__board {
+  grid-area: board;
+}
+
+.chessboard__board {
+  /* Locked square, always. The board never renders non-square. */
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  position: relative;
+  /* Lets labels size from the board's own width rather than the viewport. */
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+.chessboard__square {
+  position: relative;
+  transition: background-color 120ms ease;
+  transition-delay: calc(var(--square-index, 0) * 2ms);
+}
+
+.chessboard__square[data-color='light'] {
+  background-color: var(--board-light);
+}
+
+.chessboard__square[data-color='dark'] {
+  background-color: var(--board-dark);
+}
+
+/* The overlay layer pieces will mount into. Empty for now. */
+.chessboard__overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.chessboard__label {
+  position: absolute;
+  font-family:
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 2.6cqw;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/*
+ * A label takes the opposite square's colour in the active theme, which is what
+ * makes coordinates read as part of the board rather than printed onto it.
+ */
+.chessboard__square[data-color='light'] .chessboard__label {
+  color: var(--board-light-coord);
+}
+
+.chessboard__square[data-color='dark'] .chessboard__label {
+  color: var(--board-dark-coord);
+}
+
+.chessboard__label--rank {
+  top: 4%;
+  left: 4%;
+}
+
+.chessboard__label--file {
+  right: 4%;
+  bottom: 4%;
+}
+
+/* Outside mode: labels live in a gutter and use the theme's border colour. */
+.chessboard__gutter {
+  display: grid;
+  color: var(--board-border);
+  font-size: 2.6cqw;
+  /* Padding in em keeps the gutter proportional to the board as it scales. */
+  padding: 0.5em;
+}
+
+.chessboard__gutter--rank {
+  padding-block: 0;
+}
+
+.chessboard__gutter--file {
+  padding-inline: 0;
+}
+
+.chessboard__gutter .chessboard__label--outside {
+  position: static;
+  display: grid;
+  place-items: center;
+  color: inherit;
+  font-size: inherit;
+}
+
+.chessboard__gutter--rank {
+  grid-area: ranks;
+  grid-template-rows: repeat(8, 1fr);
+}
+
+.chessboard__gutter--file {
+  grid-area: files;
+  grid-template-columns: repeat(8, 1fr);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chessboard__square {
+    transition: none;
+    transition-delay: 0s;
+  }
+}

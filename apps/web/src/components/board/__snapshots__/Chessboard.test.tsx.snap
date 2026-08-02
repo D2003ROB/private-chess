@@ -1,0 +1,562 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Chessboard > matches the default board snapshot 1`] = `
+<div
+  class="chessboard"
+  data-coordinates="inside"
+  style="--board-light: #EBECD0; --board-dark: #779556; --board-light-coord: #779556; --board-dark-coord: #EBECD0; --board-border: #5C7043;"
+>
+  <div
+    aria-label="Chessboard, white at bottom"
+    class="chessboard__board"
+    role="img"
+  >
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="a8"
+      style="--square-index: 0;"
+    >
+      <span
+        class="chessboard__label chessboard__label--rank"
+      >
+        8
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="b8"
+      style="--square-index: 1;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="c8"
+      style="--square-index: 2;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="d8"
+      style="--square-index: 3;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="e8"
+      style="--square-index: 4;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="f8"
+      style="--square-index: 5;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="g8"
+      style="--square-index: 6;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="h8"
+      style="--square-index: 7;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="a7"
+      style="--square-index: 8;"
+    >
+      <span
+        class="chessboard__label chessboard__label--rank"
+      >
+        7
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="b7"
+      style="--square-index: 9;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="c7"
+      style="--square-index: 10;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="d7"
+      style="--square-index: 11;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="e7"
+      style="--square-index: 12;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="f7"
+      style="--square-index: 13;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="g7"
+      style="--square-index: 14;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="h7"
+      style="--square-index: 15;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="a6"
+      style="--square-index: 16;"
+    >
+      <span
+        class="chessboard__label chessboard__label--rank"
+      >
+        6
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="b6"
+      style="--square-index: 17;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="c6"
+      style="--square-index: 18;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="d6"
+      style="--square-index: 19;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="e6"
+      style="--square-index: 20;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="f6"
+      style="--square-index: 21;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="g6"
+      style="--square-index: 22;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="h6"
+      style="--square-index: 23;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="a5"
+      style="--square-index: 24;"
+    >
+      <span
+        class="chessboard__label chessboard__label--rank"
+      >
+        5
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="b5"
+      style="--square-index: 25;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="c5"
+      style="--square-index: 26;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="d5"
+      style="--square-index: 27;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="e5"
+      style="--square-index: 28;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="f5"
+      style="--square-index: 29;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="g5"
+      style="--square-index: 30;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="h5"
+      style="--square-index: 31;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="a4"
+      style="--square-index: 32;"
+    >
+      <span
+        class="chessboard__label chessboard__label--rank"
+      >
+        4
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="b4"
+      style="--square-index: 33;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="c4"
+      style="--square-index: 34;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="d4"
+      style="--square-index: 35;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="e4"
+      style="--square-index: 36;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="f4"
+      style="--square-index: 37;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="g4"
+      style="--square-index: 38;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="h4"
+      style="--square-index: 39;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="a3"
+      style="--square-index: 40;"
+    >
+      <span
+        class="chessboard__label chessboard__label--rank"
+      >
+        3
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="b3"
+      style="--square-index: 41;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="c3"
+      style="--square-index: 42;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="d3"
+      style="--square-index: 43;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="e3"
+      style="--square-index: 44;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="f3"
+      style="--square-index: 45;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="g3"
+      style="--square-index: 46;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="h3"
+      style="--square-index: 47;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="a2"
+      style="--square-index: 48;"
+    >
+      <span
+        class="chessboard__label chessboard__label--rank"
+      >
+        2
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="b2"
+      style="--square-index: 49;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="c2"
+      style="--square-index: 50;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="d2"
+      style="--square-index: 51;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="e2"
+      style="--square-index: 52;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="f2"
+      style="--square-index: 53;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="g2"
+      style="--square-index: 54;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="h2"
+      style="--square-index: 55;"
+    />
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="a1"
+      style="--square-index: 56;"
+    >
+      <span
+        class="chessboard__label chessboard__label--rank"
+      >
+        1
+      </span>
+      <span
+        class="chessboard__label chessboard__label--file"
+      >
+        a
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="b1"
+      style="--square-index: 57;"
+    >
+      <span
+        class="chessboard__label chessboard__label--file"
+      >
+        b
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="c1"
+      style="--square-index: 58;"
+    >
+      <span
+        class="chessboard__label chessboard__label--file"
+      >
+        c
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="d1"
+      style="--square-index: 59;"
+    >
+      <span
+        class="chessboard__label chessboard__label--file"
+      >
+        d
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="e1"
+      style="--square-index: 60;"
+    >
+      <span
+        class="chessboard__label chessboard__label--file"
+      >
+        e
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="f1"
+      style="--square-index: 61;"
+    >
+      <span
+        class="chessboard__label chessboard__label--file"
+      >
+        f
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="dark"
+      data-square="g1"
+      style="--square-index: 62;"
+    >
+      <span
+        class="chessboard__label chessboard__label--file"
+      >
+        g
+      </span>
+    </div>
+    <div
+      aria-hidden="true"
+      class="chessboard__square"
+      data-color="light"
+      data-square="h1"
+      style="--square-index: 63;"
+    >
+      <span
+        class="chessboard__label chessboard__label--file"
+      >
+        h
+      </span>
+    </div>
+    <div
+      class="chessboard__overlay"
+    />
+  </div>
+</div>
+`;
