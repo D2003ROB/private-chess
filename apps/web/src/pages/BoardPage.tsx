@@ -1,25 +1,15 @@
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
-import {
-  FILES,
-  RANKS,
-  STARTING_LAYOUT,
-  type BoardFile,
-  type BoardRank,
-  type PieceColor,
-  type PieceType,
-  type Square,
-} from '@chess/shared';
-import { movesFor } from '@chess/rules';
+import type { PieceColor, PieceType } from '@chess/shared';
 import {
   BOARD_THEMES,
-  Chessboard,
   DEFAULT_THEME_ID,
   isBoardThemeId,
   type BoardThemeId,
   type CoordinateMode,
   type Orientation,
 } from '../components/board';
+import { GameBoard } from '../components/game';
 import { Piece } from '../components/pieces';
 import './BoardPage.css';
 
@@ -64,31 +54,8 @@ function loadPrefs(): BoardPrefs {
   }
 }
 
-/**
- * Where a square is drawn, which is the inverse of the board's own cell -> name
- * mapping and the only thing the move dots need to position themselves.
- */
-function cellFor(square: Square, orientation: Orientation) {
-  const file = FILES.indexOf(square[0] as BoardFile);
-  const rank = RANKS.indexOf(square[1] as BoardRank);
-
-  return {
-    column: orientation === 'white' ? file : 7 - file,
-    row: orientation === 'white' ? 7 - rank : rank,
-  };
-}
-
 export function BoardPage() {
   const [prefs, setPrefs] = useState<BoardPrefs>(loadPrefs);
-  // The whole of the move inspector's state: which square is selected. Nothing
-  // moves — this is a debugging view of `movesFor`, not the game UI.
-  const [selected, setSelected] = useState<Square | null>(null);
-
-  const selectSquare = (square: Square) => {
-    setSelected((current) => (current === square || !STARTING_LAYOUT[square] ? null : square));
-  };
-
-  const targets = selected ? movesFor(STARTING_LAYOUT, selected) : [];
 
   useEffect(() => {
     try {
@@ -117,31 +84,17 @@ export function BoardPage() {
       <header className="board-page__header">
         <h1>Board</h1>
         <p className="board-page__subtitle">
-          Squares, coordinates, themes and the Meridian piece set. Click a piece to see the quiet
-          moves <code>movesFor</code> reports — nothing moves.
+          A hot-seat board over <code>@chess/rules</code>: click a piece for its legal moves, click
+          a destination to play it. No engine, no clock, no undo.
         </p>
       </header>
 
       <div className="board-page__board">
-        <Chessboard
+        <GameBoard
           theme={prefs.theme}
           orientation={prefs.orientation}
           coordinates={prefs.coordinates}
-          pieces={STARTING_LAYOUT}
-          onSquareClick={selectSquare}
-        >
-          {targets.map((square) => {
-            const { row, column } = cellFor(square, prefs.orientation);
-            return (
-              <span
-                key={square}
-                className="board-page__dot"
-                data-target={square}
-                style={{ left: `${column * 12.5}%`, top: `${row * 12.5}%` }}
-              />
-            );
-          })}
-        </Chessboard>
+        />
       </div>
 
       <div className="board-page__controls">

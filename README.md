@@ -3,11 +3,12 @@
 A full-stack skeleton for a chess application: a React UI talking to a Fastify API talking to
 Postgres.
 
-**This repository currently contains plumbing and a little chess.** There is a themed board at
-`/board` with a full piece set on it, and a rules package that generates the quiet moves of the six
-piece types — the geometry of movement, and nothing beyond it. No captures, no check, no engine,
-and nothing that actually moves. What the plumbing proves is one thin vertical slice — create and
-list game records — that exercises every layer end to end.
+**This repository contains plumbing and a complete set of chess rules.** `/board` is a playable
+hot-seat board over `@chess/rules`, which knows every legal move in any position — captures, check,
+pins, castling, en passant, promotion — and when the game is over. It is verified against the
+standard perft positions. There is no engine, no notation, no clock, and no game is persisted: the
+plumbing proves one thin vertical slice — create and list game records — end to end, and the rules
+have not been wired to it yet.
 
 Working in this repository — as a person or an agent? Start with [AGENTS.md](./AGENTS.md): the
 architecture, the invariants worth not breaking, and what is deliberately absent.
@@ -56,6 +57,7 @@ Run these from the repository root.
 | `pnpm dev`          | Builds `@chess/shared`, then runs the API and web dev servers in parallel |
 | `pnpm build`        | Builds every workspace in dependency order                                |
 | `pnpm test`         | Runs Vitest in every workspace (no database required)                     |
+| `pnpm test:perft`   | Depth-4 perft for the rules engine (~90 seconds), not run by `test`       |
 | `pnpm typecheck`    | `tsc --noEmit` across every workspace, tests included                     |
 | `pnpm lint`         | ESLint over the whole repository                                          |
 | `pnpm lint:fix`     | ESLint with `--fix`                                                       |
@@ -92,13 +94,13 @@ pnpm --filter @chess/api db:migrate:dev --name <migration-name>
 │   └── web/                    # React 19 + Vite + TanStack Query
 │       └── src/
 │           ├── api/client.ts   # typed fetch wrapper, parses with shared Zod
-│           ├── components/     # board/ and pieces/ — the chessboard and its artwork
+│           ├── components/     # board/, pieces/, game/ — chessboard, artwork, play
 │           ├── pages/          # GamesPage.tsx, BoardPage.tsx and their tests
 │           ├── App.tsx         # QueryClientProvider root
 │           └── main.tsx
 ├── packages/
 │   ├── shared/                 # Zod schemas, chess types, used everywhere
-│   └── rules/                  # movement geometry: movesFor(board, square)
+│   └── rules/                  # the rules engine: legalMoves, applyMove, gameStatus
 └── docker-compose.yml          # Postgres 16
 ```
 
@@ -137,3 +139,7 @@ pnpm test
 Tests need no database and no Docker. The API tests build the real Fastify app via `buildApp()` and
 drive it with `app.inject()`, passing an in-memory implementation of the `Database` interface — so
 routes, Zod validation, status codes, and serialization are all exercised without infrastructure.
+
+The rules engine is checked with perft: the five standard positions, counted to depth 3 in
+`pnpm test` and to depth 4 in `pnpm test:perft`, which takes about 90 seconds and is deliberately
+kept out of the default run.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { STARTING_LAYOUT } from '@chess/shared';
+import { parseFen, STARTING_FEN } from '@chess/rules';
 import { Chessboard } from './Chessboard';
 import { BOARD_THEMES } from './themes';
 
@@ -147,7 +147,10 @@ describe('Chessboard square clicks', () => {
     const user = userEvent.setup();
     const clicked: string[] = [];
     const { container } = render(
-      <Chessboard pieces={STARTING_LAYOUT} onSquareClick={(square) => clicked.push(square)} />,
+      <Chessboard
+        pieces={parseFen(STARTING_FEN).board}
+        onSquareClick={(square) => clicked.push(square)}
+      />,
     );
 
     const cell = container.querySelector('[data-square="e1"]');

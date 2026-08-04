@@ -10,6 +10,7 @@
     "dev": "pnpm --filter @chess/shared build && pnpm --parallel --filter \"./apps/*\" dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
+    "test:perft": "pnpm --filter @chess/rules test:perft",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
