@@ -1,0 +1,203 @@
+/* Review badges, board overlays and the eval graph. */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 4px;
+  line-height: 1;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge[data-ink='light'] {
+  color: #fff;
+}
+
+.badge[data-ink='dark'] {
+  color: #1c1c1c;
+}
+
+.badge--inline {
+  padding: 0.15rem 0.4rem;
+  font-size: 0.7rem;
+}
+
+/* On a board square the glyph carries it alone: the name would not fit. */
+.badge--square {
+  width: 1.5rem;
+  height: 1.5rem;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  font-size: 0.75rem;
+}
+
+.badge--square .badge__name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.review-board__arrows {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.review-board__arrow {
+  stroke-width: 0.12;
+  opacity: 0.85;
+}
+
+.review-board__arrow--played {
+  stroke: #2f6fd0;
+}
+
+/* Dashed, so the two arrows stay apart in greyscale. */
+.review-board__arrow--best {
+  stroke: #35a35b;
+  stroke-dasharray: 0.3 0.2;
+}
+
+.review-board__played {
+  fill: #2f6fd0;
+}
+
+.review-board__best {
+  fill: #35a35b;
+}
+
+.review-board__badge {
+  position: absolute;
+  width: 12.5%;
+  height: 12.5%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.eval-graph {
+  width: 100%;
+  height: 72px;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.eval-graph__black {
+  fill: #2b2b2b;
+}
+
+.eval-graph__white {
+  fill: #f2f2f2;
+}
+
+.eval-graph__midline {
+  stroke: #888;
+  stroke-width: 0.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.eval-graph__cursor {
+  stroke: #d08a2f;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.eval-graph__mark--blunder {
+  fill: #b33430;
+}
+
+.eval-graph__mark--miss {
+  fill: #d75f5f;
+}
+
+.eval-graph__mark--brilliant {
+  fill: #1baaa6;
+}
+
+.eval-graph__hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.summary {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.summary__caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 0.4rem;
+}
+
+.summary th,
+.summary td {
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+.summary__label {
+  text-align: center;
+}
+
+.summary__count {
+  font-variant-numeric: tabular-nums;
+  width: 4rem;
+}
+
+.move-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.move-list__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.25rem 0.4rem;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.move-list__row:hover {
+  background: #ececec;
+}
+
+.move-list__row[aria-current='true'] {
+  background: #ddeafc;
+}
+
+.move-list__number {
+  width: 2.5rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.move-list__move {
+  width: 5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.move-list__best {
+  color: var(--muted);
+  font-size: 0.72rem;
+}

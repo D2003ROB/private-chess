@@ -63,6 +63,14 @@ export class EngineClient {
   /** The newest request, held until the engine can legally accept it. */
   private queued: AnalyseRequest | null = null;
 
+  /** The newest evaluation of the running search, for `evaluate` to resolve with. */
+  private latest: Evaluation | null = null;
+  private finishWaiters: {
+    generation: number;
+    resolve: (evaluation: Evaluation) => void;
+    reject: (error: Error) => void;
+  }[] = [];
+
   private lines = new Map<number, EngineLine>();
   private depth = 0;
   private seldepth: number | null = null;
@@ -156,6 +164,22 @@ export class EngineClient {
     // Otherwise it is still loading, and `init` drains the queue at `readyok`.
   }
 
+  /**
+   * Analyses one position and resolves when the search finishes.
+   *
+   * The promise shape is what batch review needs: it walks a whole game one
+   * position at a time and has to know when each is done. Live analysis keeps
+   * using `analyse` and the `eval` stream.
+   */
+  evaluate(fen: string, options: AnalyseOptions = {}): Promise<Evaluation> {
+    this.analyse(fen, options);
+    const generation = this.generation;
+
+    return new Promise((resolve, reject) => {
+      this.finishWaiters.push({ generation, resolve, reject });
+    });
+  }
+
   /** Stops the current search and resolves once the engine acknowledges it. */
   async stop(): Promise<void> {
     if (!this.searching) return;
@@ -183,6 +207,8 @@ export class EngineClient {
 
     for (const waiter of this.waiters) waiter.reject(new Error('Engine disposed'));
     this.waiters = [];
+    for (const waiter of this.finishWaiters) waiter.reject(new Error('Engine disposed'));
+    this.finishWaiters = [];
     for (const resolve of this.stopWaiters) resolve();
     this.stopWaiters = [];
 
@@ -197,6 +223,7 @@ export class EngineClient {
     this.searchGeneration = this.generation;
     this.searchFen = request.fen;
     this.searchTurn = fenTurn(request.fen);
+    this.latest = null;
     this.lines.clear();
     this.depth = 0;
     this.seldepth = null;
@@ -246,7 +273,7 @@ export class EngineClient {
     const best = lines[0];
     if (!best) return;
 
-    this.emit('eval', {
+    this.latest = {
       fen: this.searchFen,
       depth: this.depth,
       seldepth: this.seldepth,
@@ -254,11 +281,42 @@ export class EngineClient {
       nps: this.nps,
       score: best.score,
       lines,
-    } satisfies Evaluation);
+    } satisfies Evaluation;
+
+    this.emit('eval', this.latest);
+  }
+
+  /**
+   * A search that produced nothing — a mated or stalemated position, where the
+   * engine answers `bestmove (none)` and says no more.
+   */
+  private emptyEvaluation(): Evaluation {
+    return {
+      fen: this.searchFen,
+      depth: 0,
+      seldepth: null,
+      nodes: null,
+      nps: null,
+      score: { kind: 'cp', value: 0 },
+      lines: [],
+    };
   }
 
   private onSearchEnded(): void {
     this.searching = false;
+
+    const finished = this.latest ?? this.emptyEvaluation();
+    const waiting = this.finishWaiters;
+    this.finishWaiters = [];
+
+    for (const waiter of waiting) {
+      // A waiter for a later generation is still queued; one for an earlier
+      // generation was superseded before it ever ran.
+      if (waiter.generation === this.searchGeneration) waiter.resolve(finished);
+      else if (waiter.generation < this.searchGeneration) {
+        waiter.reject(new Error('Superseded by a newer position'));
+      } else this.finishWaiters.push(waiter);
+    }
 
     for (const resolve of this.stopWaiters) resolve();
     this.stopWaiters = [];

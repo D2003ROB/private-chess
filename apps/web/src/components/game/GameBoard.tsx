@@ -1,15 +1,19 @@
 import { useState, type ReactNode } from 'react';
 import type { Move, PieceColor, Position, PromotionPiece, Square } from '@chess/shared';
-import { applyMove, gameStatus, legalMovesFrom, parseFen, STARTING_FEN } from '@chess/rules';
+import { gameStatus, legalMovesFrom } from '@chess/rules';
+import { useGame } from '../../game';
 import { Chessboard, type BoardThemeId, type CoordinateMode, type Orientation } from '../board';
 import { Piece } from '../pieces';
 import { squareToCell } from './cells';
 import './GameBoard.css';
 
 /**
- * A hot-seat board: the review affordance for the rules engine, which cannot
- * be inspected any other way. One `Position` in state, `applyMove` to advance
- * it. No API calls, no persistence, no undo, and no move list.
+ * A hot-seat board over the played game.
+ *
+ * The game — start position, moves, and every position they produced — lives
+ * in `GameProvider` so the review page can read it. The board renders whatever
+ * position the cursor points at, and playing from anywhere but the end
+ * discards what followed.
  */
 
 const PROMOTION_ORDER: PromotionPiece[] = ['q', 'r', 'b', 'n'];
@@ -26,8 +30,6 @@ interface GameBoardProps {
   theme: BoardThemeId;
   orientation: Orientation;
   coordinates: CoordinateMode;
-  /** Where to start. Defaults to the initial position; read once, not watched. */
-  initialFen?: string;
   /**
    * Rendered beside the board and handed the live position. A slot rather than
    * a prop drill: the board stays the single owner of the game state, and
@@ -52,14 +54,8 @@ function describe(position: Position): string {
   }
 }
 
-export function GameBoard({
-  theme,
-  orientation,
-  coordinates,
-  initialFen = STARTING_FEN,
-  aside,
-}: GameBoardProps) {
-  const [position, setPosition] = useState<Position>(() => parseFen(initialFen));
+export function GameBoard({ theme, orientation, coordinates, aside }: GameBoardProps) {
+  const { game, index, position, play: commit, goTo } = useGame();
   const [selected, setSelected] = useState<Square | null>(null);
   /** The four promotion moves awaiting a choice, if a promoting move was clicked. */
   const [promoting, setPromoting] = useState<Move[] | null>(null);
@@ -67,7 +63,7 @@ export function GameBoard({
   const moves = selected ? legalMovesFrom(position, selected) : [];
 
   const play = (move: Move) => {
-    setPosition(applyMove(position, move));
+    commit(move);
     setSelected(null);
     setPromoting(null);
   };
@@ -101,6 +97,28 @@ export function GameBoard({
       <p className="game__status" role="status">
         {describe(position)}
       </p>
+
+      <nav className="game__nav" aria-label="Move navigation">
+        <button type="button" onClick={() => goTo(0)} disabled={index === 0}>
+          ⏮
+        </button>
+        <button type="button" onClick={() => goTo(index - 1)} disabled={index === 0}>
+          ◀
+        </button>
+        <span className="game__ply">
+          {index} / {game.moves.length}
+        </span>
+        <button type="button" onClick={() => goTo(index + 1)} disabled={index >= game.moves.length}>
+          ▶
+        </button>
+        <button
+          type="button"
+          onClick={() => goTo(game.moves.length)}
+          disabled={index >= game.moves.length}
+        >
+          ⏭
+        </button>
+      </nav>
 
       <div className="game__layout">
         <div className="game__board">

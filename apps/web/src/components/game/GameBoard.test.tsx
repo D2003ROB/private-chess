@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Square } from '@chess/shared';
 import { GameBoard } from './GameBoard';
+import { GameProvider } from '../../game';
 
 function board(fen: string) {
+  // The game lives in the provider now, so the starting position comes from
+  // there rather than from a prop.
   return render(
-    <GameBoard
-      theme="tournament-green"
-      orientation="white"
-      coordinates="inside"
-      initialFen={fen}
-    />,
+    <GameProvider initialFen={fen}>
+      <GameBoard theme="tournament-green" orientation="white" coordinates="inside" />
+    </GameProvider>,
   );
 }
 
@@ -49,8 +49,10 @@ describe('promotion', () => {
 
     await user.click(squareAt('a8'));
 
-    expect(chooser()).not.toBeNull();
-    expect(screen.getAllByRole('button')).toHaveLength(4);
+    const group = chooser();
+    expect(group).not.toBeNull();
+    // Scoped to the chooser: the board also has its navigation buttons now.
+    expect(within(group as HTMLElement).getAllByRole('button')).toHaveLength(4);
     // Nothing has moved yet.
     expect(pieceOn('a7')).toBe('White pawn');
   });

@@ -3,7 +3,20 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Square } from '@chess/shared';
 import { legalMovesFrom, parseFen, STARTING_FEN } from '@chess/rules';
+import { MemoryRouter } from 'react-router-dom';
 import { BoardPage } from './BoardPage';
+import { GameProvider } from '../game';
+
+/** BoardPage now reads the shared game and links to /review. */
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <GameProvider>
+        <BoardPage />
+      </GameProvider>
+    </MemoryRouter>,
+  );
+}
 
 function squareAt(square: Square) {
   const cell = document.querySelector(`[data-square="${square}"]`);
@@ -37,7 +50,7 @@ describe('BoardPage', () => {
   });
 
   it('starts from the initial position with nothing selected', () => {
-    render(<BoardPage />);
+    renderPage();
 
     expect(markers()).toEqual([]);
     expect(screen.getByRole('status')).toHaveTextContent('White to move');
@@ -46,7 +59,7 @@ describe('BoardPage', () => {
 
   it('marks exactly the squares legalMovesFrom returns', async () => {
     const user = userEvent.setup();
-    render(<BoardPage />);
+    renderPage();
     const position = parseFen(STARTING_FEN);
 
     for (const square of ['b1', 'e2', 'a2'] as Square[]) {
@@ -58,7 +71,7 @@ describe('BoardPage', () => {
 
   it('rings a capture instead of dotting it', async () => {
     const user = userEvent.setup();
-    render(<BoardPage />);
+    renderPage();
 
     // 1. e4 d5, and now the pawn on e4 can take on d5.
     await user.click(squareAt('e2'));
@@ -73,7 +86,7 @@ describe('BoardPage', () => {
 
   it('plays the move when a destination is clicked', async () => {
     const user = userEvent.setup();
-    render(<BoardPage />);
+    renderPage();
 
     await user.click(squareAt('e2'));
     await user.click(squareAt('e4'));
@@ -86,7 +99,7 @@ describe('BoardPage', () => {
 
   it('will not move a piece on an illegal click', async () => {
     const user = userEvent.setup();
-    render(<BoardPage />);
+    renderPage();
 
     await user.click(squareAt('b1'));
     // d2 is occupied by a friendly pawn and is not a knight destination.
@@ -98,7 +111,7 @@ describe('BoardPage', () => {
 
   it('refuses to select the side that is not to move', async () => {
     const user = userEvent.setup();
-    render(<BoardPage />);
+    renderPage();
 
     await user.click(squareAt('e7'));
 
@@ -107,7 +120,7 @@ describe('BoardPage', () => {
 
   it('clears the selection when the same piece is clicked again', async () => {
     const user = userEvent.setup();
-    render(<BoardPage />);
+    renderPage();
 
     await user.click(squareAt('b1'));
     expect(markers('move')).not.toEqual([]);
@@ -118,7 +131,7 @@ describe('BoardPage', () => {
 
   it('reports check and checkmate in the status line', async () => {
     const user = userEvent.setup();
-    render(<BoardPage />);
+    renderPage();
 
     // Fool's mate: 1. f3 e5 2. g4 Qh4#
     const foolsMate: [Square, Square][] = [

@@ -3,11 +3,16 @@
 A full-stack skeleton for a chess application: a React UI talking to a Fastify API talking to
 Postgres.
 
-**This repository contains plumbing, a complete set of chess rules, and live engine analysis.**
+**This repository contains plumbing, a complete set of chess rules, live engine analysis, and
+post-game review.**
 `/board` is a playable hot-seat board over `@chess/rules`, which knows every legal move in any
 position — captures, check, pins, castling, en passant, promotion — and when the game is over; it
 is verified against the standard perft positions. Switching on analysis loads Stockfish 18 Lite
 into a Web Worker and shows an eval bar, a score, the search depth and three candidate lines.
+
+After a game, `/review` labels every move — Brilliant through Blunder — and scores each side's
+accuracy, with a summary table and an eval graph. Those labels are this app's own analysis, not
+chess.com's: their algorithm is proprietary and the two will disagree.
 
 There is no computer opponent, no notation, no clock, and no game is persisted: the plumbing
 proves one thin vertical slice — create and list game records — end to end, and the rules have not
@@ -102,9 +107,11 @@ pnpm --filter @chess/api db:migrate:dev --name <migration-name>
 │   └── web/                    # React 19 + Vite + TanStack Query
 │       └── src/
 │           ├── api/client.ts   # typed fetch wrapper, parses with shared Zod
-│           ├── components/     # board/, pieces/, game/, analysis/
+│           ├── components/     # board/, pieces/, game/, analysis/, review/
+│           ├── review/         # move classification, accuracy, batch analysis
 │           ├── engine/          # Stockfish worker plumbing and UCI parsers
-│           ├── pages/          # GamesPage.tsx, BoardPage.tsx and their tests
+│           ├── game/           # the played game, shared across routes
+│           ├── pages/          # GamesPage, BoardPage, ReviewPage and their tests
 │           ├── App.tsx         # QueryClientProvider root
 │           └── main.tsx
 ├── packages/

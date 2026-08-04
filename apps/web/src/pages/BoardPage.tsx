@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { z } from 'zod';
 import type { PieceColor, PieceType } from '@chess/shared';
 import {
@@ -11,6 +12,7 @@ import {
 } from '../components/board';
 import { AnalysisPanel, ENGINE_DEPTHS, type EngineDepth } from '../components/analysis';
 import { GameBoard } from '../components/game';
+import { useGame } from '../game';
 import { Piece } from '../components/pieces';
 import './BoardPage.css';
 
@@ -67,6 +69,7 @@ function loadPrefs(): BoardPrefs {
 
 export function BoardPage() {
   const [prefs, setPrefs] = useState<BoardPrefs>(loadPrefs);
+  const { game, reset } = useGame();
 
   useEffect(() => {
     try {
@@ -122,6 +125,14 @@ export function BoardPage() {
       </div>
 
       <div className="board-page__controls">
+        {game.moves.length > 0 ? (
+          <Link className="board-page__review" to="/review">
+            Review game <span className="board-page__value">{game.moves.length} moves</span>
+          </Link>
+        ) : null}
+        <button type="button" onClick={reset} disabled={game.moves.length === 0}>
+          New game
+        </button>
         <button type="button" onClick={flipOrientation}>
           Flip board <span className="board-page__value">{prefs.orientation} at bottom</span>
         </button>
