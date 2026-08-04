@@ -3,12 +3,19 @@
 A full-stack skeleton for a chess application: a React UI talking to a Fastify API talking to
 Postgres.
 
-**This repository contains plumbing and a complete set of chess rules.** `/board` is a playable
-hot-seat board over `@chess/rules`, which knows every legal move in any position — captures, check,
-pins, castling, en passant, promotion — and when the game is over. It is verified against the
-standard perft positions. There is no engine, no notation, no clock, and no game is persisted: the
-plumbing proves one thin vertical slice — create and list game records — end to end, and the rules
-have not been wired to it yet.
+**This repository contains plumbing, a complete set of chess rules, and live engine analysis.**
+`/board` is a playable hot-seat board over `@chess/rules`, which knows every legal move in any
+position — captures, check, pins, castling, en passant, promotion — and when the game is over; it
+is verified against the standard perft positions. Switching on analysis loads Stockfish 18 Lite
+into a Web Worker and shows an eval bar, a score, the search depth and three candidate lines.
+
+There is no computer opponent, no notation, no clock, and no game is persisted: the plumbing
+proves one thin vertical slice — create and list game records — end to end, and the rules have not
+been wired to it yet.
+
+> **Licensing.** The bundled Stockfish engine is GPL-3.0-or-later, and shipping it to the browser
+> is distribution. See [`licenses/stockfish/`](./licenses/stockfish/) before reusing this code
+> commercially.
 
 Working in this repository — as a person or an agent? Start with [AGENTS.md](./AGENTS.md): the
 architecture, the invariants worth not breaking, and what is deliberately absent.
@@ -58,6 +65,7 @@ Run these from the repository root.
 | `pnpm build`        | Builds every workspace in dependency order                                |
 | `pnpm test`         | Runs Vitest in every workspace (no database required)                     |
 | `pnpm test:perft`   | Depth-4 perft for the rules engine (~90 seconds), not run by `test`       |
+| `pnpm test:engine`  | Drives the real Stockfish build, not run by `test`                        |
 | `pnpm typecheck`    | `tsc --noEmit` across every workspace, tests included                     |
 | `pnpm lint`         | ESLint over the whole repository                                          |
 | `pnpm lint:fix`     | ESLint with `--fix`                                                       |
@@ -94,13 +102,15 @@ pnpm --filter @chess/api db:migrate:dev --name <migration-name>
 │   └── web/                    # React 19 + Vite + TanStack Query
 │       └── src/
 │           ├── api/client.ts   # typed fetch wrapper, parses with shared Zod
-│           ├── components/     # board/, pieces/, game/ — chessboard, artwork, play
+│           ├── components/     # board/, pieces/, game/, analysis/
+│           ├── engine/          # Stockfish worker plumbing and UCI parsers
 │           ├── pages/          # GamesPage.tsx, BoardPage.tsx and their tests
 │           ├── App.tsx         # QueryClientProvider root
 │           └── main.tsx
 ├── packages/
 │   ├── shared/                 # Zod schemas, chess types, used everywhere
 │   └── rules/                  # the rules engine: legalMoves, applyMove, gameStatus
+├── licenses/stockfish/         # GPLv3 text and attribution for the engine
 └── docker-compose.yml          # Postgres 16
 ```
 
@@ -143,3 +153,6 @@ routes, Zod validation, status codes, and serialization are all exercised withou
 The rules engine is checked with perft: the five standard positions, counted to depth 3 in
 `pnpm test` and to depth 4 in `pnpm test:perft`, which takes about 90 seconds and is deliberately
 kept out of the default run.
+
+The Stockfish integration is covered by pure parser tests and by an `EngineClient` driven against
+a scripted fake worker. `pnpm test:engine` runs the same client against the real engine.

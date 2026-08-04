@@ -12,6 +12,9 @@ export default tseslint.config(
       '**/coverage/**',
       '**/node_modules/**',
       '**/generated/**',
+      // The Stockfish build copied in at install time: vendored, minified,
+      // and not ours to lint.
+      'apps/web/public/engine/**',
     ],
   },
   js.configs.recommended,
@@ -43,6 +46,17 @@ export default tseslint.config(
     files: ['**/*.config.{js,ts}', 'eslint.config.js'],
     languageOptions: {
       globals: globals.node,
+    },
+  },
+  {
+    // Node-side tooling that lives inside the web app: the engine asset copy
+    // and the integration harness that drives the real engine.
+    files: ['apps/web/scripts/**', 'apps/web/test-engine/**'],
+    languageOptions: {
+      globals: globals.node,
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
   prettier,

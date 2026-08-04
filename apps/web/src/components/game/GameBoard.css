@@ -74,3 +74,16 @@
   border-color: var(--border);
   background: #f0f0f0;
 }
+
+/* Board and analysis side by side; the panel wraps under it when narrow. */
+.game__layout {
+  display: flex;
+  gap: 1rem;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.game__board {
+  flex: 1 1 20rem;
+  min-width: 0;
+}

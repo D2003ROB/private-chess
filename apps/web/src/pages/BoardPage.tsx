@@ -9,6 +9,7 @@ import {
   type CoordinateMode,
   type Orientation,
 } from '../components/board';
+import { AnalysisPanel, ENGINE_DEPTHS, type EngineDepth } from '../components/analysis';
 import { GameBoard } from '../components/game';
 import { Piece } from '../components/pieces';
 import './BoardPage.css';
@@ -29,18 +30,28 @@ const prefsSchema = z.object({
   theme: z.string().refine(isBoardThemeId),
   orientation: z.enum(['white', 'black']),
   coordinates: z.enum(['inside', 'outside', 'none']),
+  // Off by default: enabling downloads the engine.
+  engine: z.boolean().default(false),
+  engineDepth: z
+    .number()
+    .refine((value): value is EngineDepth => ENGINE_DEPTHS.includes(value as EngineDepth))
+    .default(18),
 });
 
 interface BoardPrefs {
   theme: BoardThemeId;
   orientation: Orientation;
   coordinates: CoordinateMode;
+  engine: boolean;
+  engineDepth: EngineDepth;
 }
 
 const DEFAULT_PREFS: BoardPrefs = {
   theme: DEFAULT_THEME_ID,
   orientation: 'white',
   coordinates: 'inside',
+  engine: false,
+  engineDepth: 18,
 };
 
 function loadPrefs(): BoardPrefs {
@@ -94,6 +105,19 @@ export function BoardPage() {
           theme={prefs.theme}
           orientation={prefs.orientation}
           coordinates={prefs.coordinates}
+          aside={(position) => (
+            <AnalysisPanel
+              position={position}
+              enabled={prefs.engine}
+              onEnabledChange={(engine) => {
+                setPrefs((current) => ({ ...current, engine }));
+              }}
+              depth={prefs.engineDepth}
+              onDepthChange={(engineDepth) => {
+                setPrefs((current) => ({ ...current, engineDepth }));
+              }}
+            />
+          )}
         />
       </div>
 

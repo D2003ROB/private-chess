@@ -4,7 +4,7 @@ Orientation for AI agents (and humans) working in this repository. Read this bef
 If you change something this file describes, **update this file in the same commit** — see
 [Keeping this file honest](#keeping-this-file-honest).
 
-Last verified against commit: the CHESS-5 rules engine.
+Last verified against commit: the CHESS-6 Stockfish integration.
 
 ---
 
@@ -12,8 +12,8 @@ Last verified against commit: the CHESS-5 rules engine.
 
 A full-stack skeleton for a chess application: React UI → Fastify API → Postgres.
 
-**It knows the rules of chess and nothing beyond them.** No engine, no notation, no clocks, no
-authentication, no websockets, and nothing persisted. What exists is:
+**It knows the rules of chess, and it can tell you who is winning.** No notation, no clocks, no
+computer opponent, no authentication, no websockets, and nothing persisted. What exists is:
 
 - a thin vertical slice — create and list game records — proving every layer is wired together
   (CHESS-1);
@@ -24,10 +24,13 @@ authentication, no websockets, and nothing persisted. What exists is:
 - `@chess/rules`: movement geometry (CHESS-4), then a complete rules engine — captures, check,
   pins, castling, en passant, promotion, checkmate, stalemate and the draw conditions (CHESS-5),
   verified against the five standard perft positions;
-- a hot-seat board at `/board`: click a piece for its legal moves, click a destination to play it.
+- a hot-seat board at `/board`: click a piece for its legal moves, click a destination to play it;
+- live evaluation from Stockfish 18 Lite running in a Web Worker — eval bar, score, depth and
+  three candidate lines, off by default (CHESS-6). It analyses; it never plays and never
+  validates.
 
-Treat that as deliberate. If a task asks for an engine, notation, clocks, or anything persisted,
-it is new work under a new ticket, not a gap to quietly fill.
+Treat that as deliberate. If a task asks for a computer opponent, notation, clocks, game review,
+or anything persisted, it is new work under a new ticket, not a gap to quietly fill.
 
 ## 2. Stack (locked)
 
@@ -47,6 +50,7 @@ These were chosen by ticket and must not be substituted without an explicit deci
 | Validation       | Zod 4, shared between API and web    |
 | Testing          | Vitest 3                             |
 | Lint / format    | ESLint 9 (flat config) + Prettier 3  |
+| Chess engine     | `stockfish` 18.0.8, WASM, pinned     |
 
 Vite 7 and Zod 4 are newer majors than the original ticket implied; they were adopted as the
 current stable releases, not downgraded to match the text.
@@ -76,6 +80,9 @@ library. The styling is intentionally plain CSS in one stylesheet.
 │   │       └── fake-db.ts        # in-memory Database for tests
 │   └── web/                      # React + Vite
 │       ├── vite.config.ts        # dev server :5173, /api + /health proxy, vitest config
+│       ├── scripts/copy-engine.mjs  # postinstall: engine assets into public/engine/
+│       ├── test-engine/          # real-engine integration run (`pnpm test:engine`)
+│       ├── public/engine/        # the WASM build — gitignored, copied at install
 │       └── src/
 │           ├── main.tsx          # mounts <App/>
 │           ├── App.tsx           # QueryClientProvider + router + nav
@@ -86,6 +93,7 @@ library. The styling is intentionally plain CSS in one stylesheet.
 │           │   ├── themes.ts     # the 10-theme registry
 │           │   ├── types.ts      # BoardTheme and component props
 │           │   └── index.ts      # public exports
+│           ├── components/analysis/ # eval bar, readout, candidate lines (see §4d)
 │           ├── components/game/  # the hot-seat board (see §4c)
 │           │   ├── GameBoard.tsx # one useState<Position>, markers, promotion chooser
 │           │   ├── cells.ts      # square -> grid cell, the inverse of the board's map
@@ -96,6 +104,13 @@ library. The styling is intentionally plain CSS in one stylesheet.
 │           │   ├── pieceSets.ts  # registry, mirrors themes.ts
 │           │   ├── types.ts      # artwork-side types only
 │           │   └── index.ts
+│           ├── engine/          # Stockfish plumbing (see §4d)
+│           │   ├── uci.ts        # pure line parsers — no worker, no React
+│           │   ├── EngineClient.ts # worker lifecycle, command queue, state machine
+│           │   ├── useEngine.ts  # React hook wrapping EngineClient
+│           │   ├── evalDisplay.ts # cp -> win%, formatting
+│           │   ├── workerPort.ts # the real Worker transport
+│           │   └── types.ts
 │           ├── pages/GamesPage.tsx         # route /
 │           ├── pages/BoardPage.tsx         # route /board — hot-seat board, picker
 │           ├── test/setup.ts     # jest-dom + cleanup
@@ -117,6 +132,7 @@ library. The styling is intentionally plain CSS in one stylesheet.
 │       ├── perft.ts              # perft + divide, the debugging tool
 │       ├── index.ts
 │       └── __tests__/            # *.test.ts, plus *.perft.ts for depth 4
+├── licenses/stockfish/           # GPLv3 text + attribution for the engine
 ├── docker-compose.yml            # Postgres 16
 ├── tsconfig.base.json            # strict flags inherited by every workspace
 └── eslint.config.js              # single flat config for the whole repo
@@ -291,6 +307,46 @@ one subtree that diverges, then recurse into it.
 promotions, and a status line. It exists because a rules engine cannot be reviewed any other way.
 Its whole state is one `useState<Position>` — no API calls, no persistence, no undo.
 
+### 4d. The engine integration (CHESS-6)
+
+Stockfish 18 Lite runs in a Web Worker and reports an evaluation of the current position. It is
+**analysis only**: it never plays a move and it never decides legality — `@chess/rules` remains
+the sole authority on what is legal.
+
+**Licensing is a design constraint here, not a footnote.** Stockfish is GPL-3.0-or-later, and
+shipping the WASM build to the browser _is_ distribution. The full licence text and the
+attribution live in `licenses/stockfish/`, and the engine is credited in the UI. If this project
+ever needs to be closed-source, the engine has to move to an arms-length server-side process —
+GPLv3 is not AGPL, so network use alone is not distribution. That is an architectural change.
+Read `licenses/stockfish/NOTICE.md` before touching any of it.
+
+- **The engine assets are copied, never bundled.** `scripts/copy-engine.mjs` runs at install and
+  puts `stockfish-18-lite-single.{js,wasm}` into `public/engine/`, gitignored. The `.js` loader
+  resolves its `.wasm` sibling relative to itself, so the pair must keep their real names in a
+  real directory — importing them through Vite gets them hashed and the lookup breaks. Fighting
+  the bundler over this is the single biggest time sink available in this area.
+- **Pin the `stockfish` version exactly.** It is a large binary asset and the filenames carry the
+  engine major version, so a silent minor bump is not something to discover in production.
+- **Scores are normalised to White at the parser boundary.** UCI reports from the side to move's
+  perspective, so a winning Black position reports _positive_ on Black's turn. `toWhitePerspective`
+  negates it once and everything downstream is White-relative. Displayed raw, the bar flips meaning
+  every move and looks plausible for about a week. Do not "fix" it.
+- **`score mate N` is its own variant**, in moves and signed — not a very large centipawn value.
+  Clamping it to ±10000 throws away the move count the UI shows.
+- **Every command goes through `EngineClient`.** The engine is one stateful stream: changing an
+  option or starting a second search mid-search hangs it. To change position, send `stop`, wait
+  for the `bestmove` that acknowledges it, _then_ send `position` and `go`.
+- **A generation counter guards against stale results.** Every search carries the generation it
+  started under and `info` lines from a superseded one are dropped, or the tail of the previous
+  search paints over the new position's eval.
+- **`info` lines arrive dozens of times a second.** `useEngine` buffers the newest and flushes on
+  `requestAnimationFrame`. Never `setState` per line.
+- **`dispose()` is not optional.** An orphaned Stockfish worker saturates a core indefinitely.
+- The eval bar fills by **win probability**, not centipawns — a linear bar spends its range on
+  differences nobody can act on. Sigmoid, clamped at ±1000 cp.
+- `uci.ts` is pure and Node-importable, which is why the parser tests need nothing spawned. That
+  is where most of the value in this area is.
+
 ## 5. Commands
 
 Run from the repository root.
@@ -349,6 +405,10 @@ false })`, passing `createFakeDatabase()` — an in-memory `Database`. Drives it
   home square. Run perft first when touching anything in that package.
 - **Add tests at the same seam.** If you need a live database for a test, you are probably reaching
   past the `Database` interface — reconsider first.
+- **Engine** (`apps/web/src/engine/*.test.ts`): the parsers are pure, so most of the coverage is
+  there and costs nothing. `EngineClient` is tested against a scripted `EnginePort` — a fake that
+  records commands and emits lines on cue — which is the entire reason the client talks to a port
+  rather than to `Worker`. The real engine runs only under `pnpm test:engine`.
 - **`pnpm test` reads `packages/*/dist`,** because the apps and the rules tests import
   `@chess/shared` as a built package. Build before testing — the documented order in §5 already
   does.
@@ -370,14 +430,24 @@ Do not rediscover these:
   to the module so it works identically from `src` (tsx) and `dist` (node).
 - Board layout bugs are usually grid-sizing, not colour: see the two traps in §4a
   (unmatched `grid-area` names, and `1fr` tracks around an aspect-ratio box).
+- The Stockfish WASM build writes its UCI output through `console.log`, bound when the module
+  initialises. There is no usable `Module.print` hook outside a worker, which is why the
+  integration harness runs it as a child process speaking UCI over stdio instead of loading it
+  in-process. Loading it inside Vitest also puts it through the module transform and loses the
+  `locateFile` override, so it hunts for the wrong `.wasm`.
+- ESLint will happily lint the copied engine build in `apps/web/public/engine/`. It is in the
+  ignore list; leave it there.
 - jsdom does not implement container queries or `getComputedStyle` for CSS custom properties as a
   browser does. Assert board geometry and theme application in a real browser, not in Vitest —
   the component tests deliberately check DOM structure and attributes only.
 
 ## 9. Not implemented — separate tickets
 
-PGN or SAN notation (`Nf3`, `O-O`, `e8=Q+`) — its own ticket, and it depends on this one · any
-chess engine, evaluation, search or computer opponent · opening books, tablebases, move ordering ·
+PGN or SAN notation (`Nf3`, `O-O`, `e8=Q+`) — its own ticket · Stockfish as an **opponent** that
+plays moves, which needs skill levels and time control that live analysis does not · post-game
+review: accuracy, blunder classification, "best move was…" · hover-to-preview or click-to-explore
+of candidate lines · multi-threaded or full-size engine builds, and the cross-origin isolation
+headers they require · opening books, tablebases, cloud evaluation, move ordering ·
 draw offers, resignation, or claim-versus-automatic draw distinctions · clocks, time controls,
 increments · move history, move list UI, undo/redo, navigating history · dragging and dropping
 pieces · last-move or check highlight squares, arrows · persisting a game to the database or any
@@ -389,7 +459,8 @@ matchmaking, lobbies, ratings · CI pipelines, app Dockerfiles, deployment confi
 component libraries.
 
 `/board` is a review affordance, not the game UI: one position in state, no history, nothing
-persisted. Do not grow it here.
+persisted. Do not grow it here. Evaluations are likewise never cached, stored, or sent anywhere —
+the engine runs in the browser and its output lives as long as the page does.
 
 `GameStatus` already has `PENDING | ACTIVE | COMPLETED` and games carry two player names; that is
 the extent of the domain modelling. Extend it deliberately, with a migration.

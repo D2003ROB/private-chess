@@ -21,3 +21,6 @@ coverage/
 .DS_Store
 .idea/
 .vscode/
+
+# Stockfish WASM build, copied from the pinned dependency by apps/web postinstall.
+apps/web/public/engine/
