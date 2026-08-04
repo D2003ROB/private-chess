@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Move, PieceColor, Position, PromotionPiece, Square } from '@chess/shared';
 import { applyMove, gameStatus, legalMovesFrom, parseFen, STARTING_FEN } from '@chess/rules';
 import { Chessboard, type BoardThemeId, type CoordinateMode, type Orientation } from '../board';
@@ -28,6 +28,12 @@ interface GameBoardProps {
   coordinates: CoordinateMode;
   /** Where to start. Defaults to the initial position; read once, not watched. */
   initialFen?: string;
+  /**
+   * Rendered beside the board and handed the live position. A slot rather than
+   * a prop drill: the board stays the single owner of the game state, and
+   * whatever needs to read it — the engine panel today — gets it directly.
+   */
+  aside?: (position: Position) => ReactNode;
 }
 
 function describe(position: Position): string {
@@ -51,6 +57,7 @@ export function GameBoard({
   orientation,
   coordinates,
   initialFen = STARTING_FEN,
+  aside,
 }: GameBoardProps) {
   const [position, setPosition] = useState<Position>(() => parseFen(initialFen));
   const [selected, setSelected] = useState<Square | null>(null);
@@ -95,23 +102,31 @@ export function GameBoard({
         {describe(position)}
       </p>
 
-      <Chessboard
-        theme={theme}
-        orientation={orientation}
-        coordinates={coordinates}
-        pieces={position.board}
-        onSquareClick={handleSquare}
-      >
-        {selected ? <Marker square={selected} orientation={orientation} kind="selected" /> : null}
-        {moves.map((move) => (
-          <Marker
-            key={`${move.to}${move.promotion ?? ''}`}
-            square={move.to}
+      <div className="game__layout">
+        <div className="game__board">
+          <Chessboard
+            theme={theme}
             orientation={orientation}
-            kind={move.flags.includes('capture') ? 'capture' : 'move'}
-          />
-        ))}
-      </Chessboard>
+            coordinates={coordinates}
+            pieces={position.board}
+            onSquareClick={handleSquare}
+          >
+            {selected ? (
+              <Marker square={selected} orientation={orientation} kind="selected" />
+            ) : null}
+            {moves.map((move) => (
+              <Marker
+                key={`${move.to}${move.promotion ?? ''}`}
+                square={move.to}
+                orientation={orientation}
+                kind={move.flags.includes('capture') ? 'capture' : 'move'}
+              />
+            ))}
+          </Chessboard>
+        </div>
+
+        {aside ? aside(position) : null}
+      </div>
 
       {promoting ? (
         <PromotionChooser moves={promoting} color={position.turn} onChoose={play} />

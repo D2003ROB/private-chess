@@ -11,6 +11,7 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "test:perft": "pnpm --filter @chess/rules test:perft",
+    "test:engine": "pnpm --filter @chess/web test:engine",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
