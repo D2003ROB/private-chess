@@ -81,3 +81,18 @@ export interface Move {
   promotion?: PromotionPiece;
   flags: MoveFlag[];
 }
+
+/**
+ * A game as it was played: where it started, the moves, and the position after
+ * each one. `positions.length === moves.length + 1` — `positions[0]` is the
+ * start and `positions[i + 1]` is the position after `moves[i]`.
+ *
+ * Named `PlayedGame` rather than `Game` because `Game` is already the database
+ * record on the wire (see `game.ts`). Both names are right; this is the one
+ * that had to move.
+ */
+export interface PlayedGame {
+  initialFen: string;
+  moves: Move[];
+  positions: Position[];
+}

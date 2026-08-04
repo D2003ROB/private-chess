@@ -87,3 +87,19 @@
   flex: 1 1 20rem;
   min-width: 0;
 }
+
+.game__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.game__ply {
+  min-width: 4rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

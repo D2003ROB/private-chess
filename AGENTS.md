@@ -4,7 +4,7 @@ Orientation for AI agents (and humans) working in this repository. Read this bef
 If you change something this file describes, **update this file in the same commit** — see
 [Keeping this file honest](#keeping-this-file-honest).
 
-Last verified against commit: the CHESS-6 Stockfish integration.
+Last verified against commit: the CHESS-7 game review.
 
 ---
 
@@ -12,8 +12,9 @@ Last verified against commit: the CHESS-6 Stockfish integration.
 
 A full-stack skeleton for a chess application: React UI → Fastify API → Postgres.
 
-**It knows the rules of chess, and it can tell you who is winning.** No notation, no clocks, no
-computer opponent, no authentication, no websockets, and nothing persisted. What exists is:
+**It knows the rules of chess, who is winning, and how well each side played.** No notation, no
+clocks, no computer opponent, no authentication, no websockets, and nothing persisted. What
+exists is:
 
 - a thin vertical slice — create and list game records — proving every layer is wired together
   (CHESS-1);
@@ -27,10 +28,12 @@ computer opponent, no authentication, no websockets, and nothing persisted. What
 - a hot-seat board at `/board`: click a piece for its legal moves, click a destination to play it;
 - live evaluation from Stockfish 18 Lite running in a Web Worker — eval bar, score, depth and
   three candidate lines, off by default (CHESS-6). It analyses; it never plays and never
-  validates.
+  validates;
+- post-game review at `/review`: every move labelled, an accuracy score per side, a summary table
+  and an eval graph (CHESS-7).
 
-Treat that as deliberate. If a task asks for a computer opponent, notation, clocks, game review,
-or anything persisted, it is new work under a new ticket, not a gap to quietly fill.
+Treat that as deliberate. If a task asks for a computer opponent, notation, clocks, or anything
+persisted, it is new work under a new ticket, not a gap to quietly fill.
 
 ## 2. Stack (locked)
 
@@ -94,8 +97,9 @@ library. The styling is intentionally plain CSS in one stylesheet.
 │           │   ├── types.ts      # BoardTheme and component props
 │           │   └── index.ts      # public exports
 │           ├── components/analysis/ # eval bar, readout, candidate lines (see §4d)
+│           ├── components/review/ # badges, summary, move list, eval graph (see §4e)
 │           ├── components/game/  # the hot-seat board (see §4c)
-│           │   ├── GameBoard.tsx # one useState<Position>, markers, promotion chooser
+│           │   ├── GameBoard.tsx # markers, promotion chooser, move navigation
 │           │   ├── cells.ts      # square -> grid cell, the inverse of the board's map
 │           │   └── GameBoard.css
 │           ├── components/pieces/ # the piece set (see §4b)
@@ -111,13 +115,24 @@ library. The styling is intentionally plain CSS in one stylesheet.
 │           │   ├── evalDisplay.ts # cp -> win%, formatting
 │           │   ├── workerPort.ts # the real Worker transport
 │           │   └── types.ts
+│           ├── game/            # the played game, above the routes (see §4e)
+│           │   ├── gameState.ts  # createGame / playMove — pure
+│           │   └── GameContext.tsx # provider read by /board and /review
+│           ├── review/           # classification and batch analysis (see §4e)
+│           │   ├── thresholds.ts # every tunable number, in one object
+│           │   ├── classify.ts   # the labels, in win probability
+│           │   ├── accuracy.ts   # Lichess's formula
+│           │   ├── analyseGame.ts # one pass over the game, cached
+│           │   ├── labels.ts     # badge glyphs and colours
+│           │   └── useReview.ts  # progress, cancel, result
 │           ├── pages/GamesPage.tsx         # route /
 │           ├── pages/BoardPage.tsx         # route /board — hot-seat board, picker
+│           ├── pages/ReviewPage.tsx        # route /review — post-game review
 │           ├── test/setup.ts     # jest-dom + cleanup
 │           └── styles.css        # global styles + site nav
 ├── packages/
 │   ├── shared/src/
-│   │   ├── chess.ts              # Square, Piece, Board, Position, Move — no Zod
+│   │   ├── chess.ts              # Square, Piece, Board, Position, Move, PlayedGame
 │   │   ├── game.ts               # game + create-input schemas, GameStatus
 │   │   ├── http.ts               # health + error-envelope schemas
 │   │   └── index.ts              # re-exports
@@ -347,6 +362,46 @@ Read `licenses/stockfish/NOTICE.md` before touching any of it.
 - `uci.ts` is pure and Node-importable, which is why the parser tests need nothing spawned. That
   is where most of the value in this area is.
 
+### 4e. Game review (CHESS-7)
+
+`/review` labels every move of the played game and scores each side's accuracy.
+
+**It will not match chess.com, and says so in the UI.** Their classification and accuracy
+algorithms are proprietary and unpublished; nothing here reproduces them, and the two disagree
+most visibly on Brilliant and Great. The note in the interface costs one line and heads off a
+class of bug report that can never be resolved.
+
+- **The game is state now.** `src/game/` holds `PlayedGame` — start position, moves, and the
+  position after each — in a context above the routes, so `/review` reads what `/board` produced.
+  Playing from anywhere but the end discards what followed; there is no variation tree and
+  building one is not this ticket.
+- **One pass, not two.** `analyseGame` evaluates every position exactly once: the eval before move
+  `i` is `evals[i]`, the eval after is `evals[i + 1]`, and the engine's preference at `i` is
+  `evals[i].lines[0].moves[0]`. Evaluating twice doubles a wait that is already the whole UX
+  problem.
+- **Strictly sequential, at a fixed depth.** Parallel workers exhaust memory on mobile and gain
+  nothing on the single-threaded build. Varying depth makes classifications incomparable and
+  invents blunders in endgames — use `go depth N`, never `movetime`.
+- **Classification works in win probability, never centipawns.** A 100cp swing at level is a
+  serious error; the same 100cp at +9 is meaningless, and centipawn thresholds call the second one
+  a blunder. That is the whole design decision.
+- **The mover's perspective is not White's.** The engine is normalised to White for display;
+  classification flips it back for Black. Getting this wrong inverts every Black label and the
+  output still looks sane, so there is a symmetric-fixture test.
+- **Every tunable number is in `thresholds.ts`.** When labels feel wrong on real games — and they
+  will — the fix is almost always a value in there rather than the code.
+- **Accuracy uses Lichess's published constants**, including the `+ 1` the ticket's copy omitted;
+  without it a flawless move scores 99.99991 instead of 100. Book and forced moves are excluded
+  from the average. Lichess additionally weights by position volatility; that is a deliberate
+  follow-up, not done here.
+- **Badges must survive greyscale.** Several label colours sit close in hue, so every badge carries
+  a distinct glyph as well. Same for the two board arrows: the engine's preference is dashed.
+- Evaluations are cached by depth and FEN in a module-level `Map`, which is what makes re-reviewing
+  a game instant.
+- **No opening book.** The `book` label, its accuracy exclusion and its tests all exist, but
+  nothing ever produces it — the ECO dataset was deferred, as the ticket permits. Adding it is
+  wiring a source into one `isBook` flag.
+
 ## 5. Commands
 
 Run from the repository root.
@@ -409,6 +464,10 @@ false })`, passing `createFakeDatabase()` — an in-memory `Database`. Drives it
   there and costs nothing. `EngineClient` is tested against a scripted `EnginePort` — a fake that
   records commands and emits lines on cue — which is the entire reason the client talks to a port
   rather than to `Worker`. The real engine runs only under `pnpm test:engine`.
+- **Review** (`apps/web/src/review/*.test.ts`): the classifier is developed against hand-written
+  fixture evaluations, never a live engine. It is pure logic over numbers needing dozens of passes
+  while thresholds are tuned, and waiting a minute for a real analysis between each would make
+  that unbearable. The analyser is tested against a stub `Analyser`.
 - **`pnpm test` reads `packages/*/dist`,** because the apps and the rules tests import
   `@chess/shared` as a built package. Build before testing — the documented order in §5 already
   does.
@@ -444,9 +503,11 @@ Do not rediscover these:
 ## 9. Not implemented — separate tickets
 
 PGN or SAN notation (`Nf3`, `O-O`, `e8=Q+`) — its own ticket · Stockfish as an **opponent** that
-plays moves, which needs skill levels and time control that live analysis does not · post-game
-review: accuracy, blunder classification, "best move was…" · hover-to-preview or click-to-explore
-of candidate lines · multi-threaded or full-size engine builds, and the cross-origin isolation
+plays moves, which needs skill levels and time control that live analysis does not · persisting
+reviews or games to Postgres — the natural next ticket, the `games` table is already there ·
+natural-language move commentary · named openings and ECO codes · phase-based accuracy breakdowns
+· estimated Elo or player-strength inference · puzzle extraction from missed tactics ·
+hover-to-preview or click-to-explore of candidate lines · multi-threaded or full-size engine builds, and the cross-origin isolation
 headers they require · opening books, tablebases, cloud evaluation, move ordering ·
 draw offers, resignation, or claim-versus-automatic draw distinctions · clocks, time controls,
 increments · move history, move list UI, undo/redo, navigating history · dragging and dropping
