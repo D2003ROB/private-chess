@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { STARTING_LAYOUT, type PieceColor, type PieceType } from '@chess/shared';
 import { Chessboard } from '../board';
 import { Piece } from './Piece';
-import { STARTING_LAYOUT } from './startingLayout';
 import { meridian } from './sets/meridian';
-import type { PieceColor, PieceType } from './types';
 
 const TYPES: PieceType[] = ['k', 'q', 'r', 'b', 'n', 'p'];
 const COLORS: PieceColor[] = ['w', 'b'];

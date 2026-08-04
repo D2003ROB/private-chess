@@ -3,9 +3,11 @@
 A full-stack skeleton for a chess application: a React UI talking to a Fastify API talking to
 Postgres.
 
-**This repository currently contains plumbing, not chess.** There are no rules, no board, and no
-engine. What it does prove is one thin vertical slice — create and list game records — that
-exercises every layer end to end.
+**This repository currently contains plumbing and a little chess.** There is a themed board at
+`/board` with a full piece set on it, and a rules package that generates the quiet moves of the six
+piece types — the geometry of movement, and nothing beyond it. No captures, no check, no engine,
+and nothing that actually moves. What the plumbing proves is one thin vertical slice — create and
+list game records — that exercises every layer end to end.
 
 Working in this repository — as a person or an agent? Start with [AGENTS.md](./AGENTS.md): the
 architecture, the invariants worth not breaking, and what is deliberately absent.
@@ -90,11 +92,13 @@ pnpm --filter @chess/api db:migrate:dev --name <migration-name>
 │   └── web/                    # React 19 + Vite + TanStack Query
 │       └── src/
 │           ├── api/client.ts   # typed fetch wrapper, parses with shared Zod
-│           ├── pages/          # GamesPage.tsx and its test
+│           ├── components/     # board/ and pieces/ — the chessboard and its artwork
+│           ├── pages/          # GamesPage.tsx, BoardPage.tsx and their tests
 │           ├── App.tsx         # QueryClientProvider root
 │           └── main.tsx
 ├── packages/
-│   └── shared/                 # Zod schemas + inferred types, used by both apps
+│   ├── shared/                 # Zod schemas, chess types, used everywhere
+│   └── rules/                  # movement geometry: movesFor(board, square)
 └── docker-compose.yml          # Postgres 16
 ```
 
