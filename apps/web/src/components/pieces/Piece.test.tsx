@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { STARTING_LAYOUT, type PieceColor, type PieceType } from '@chess/shared';
+import type { PieceColor, PieceType } from '@chess/shared';
+import { parseFen, STARTING_FEN } from '@chess/rules';
 import { Chessboard } from '../board';
 import { Piece } from './Piece';
 import { meridian } from './sets/meridian';
+
+// Parsed from FEN now — the hand-written duplicate is gone.
+const STARTING_LAYOUT = parseFen(STARTING_FEN).board;
 
 const TYPES: PieceType[] = ['k', 'q', 'r', 'b', 'n', 'p'];
 const COLORS: PieceColor[] = ['w', 'b'];
@@ -54,7 +58,7 @@ describe('meridian set', () => {
   });
 });
 
-describe('STARTING_LAYOUT', () => {
+describe('the starting layout', () => {
   const entries = Object.entries(STARTING_LAYOUT);
 
   it('has 32 entries, 16 per colour', () => {

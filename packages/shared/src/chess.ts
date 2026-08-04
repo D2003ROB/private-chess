@@ -27,44 +27,57 @@ export interface Piece {
 export type Board = Partial<Record<Square, Piece>>;
 
 /**
- * The initial position, written out. This is a literal on purpose — FEN
- * parsing belongs to a later ticket, and when it arrives it should produce this
- * same shape rather than replace it.
+ * Which castles are still available. Set false by moving the king, moving the
+ * rook, or having that rook captured on its home square — never restored.
  */
-export const STARTING_LAYOUT: Board = {
-  a8: { type: 'r', color: 'b' },
-  b8: { type: 'n', color: 'b' },
-  c8: { type: 'b', color: 'b' },
-  d8: { type: 'q', color: 'b' },
-  e8: { type: 'k', color: 'b' },
-  f8: { type: 'b', color: 'b' },
-  g8: { type: 'n', color: 'b' },
-  h8: { type: 'r', color: 'b' },
+export interface CastlingRights {
+  wK: boolean;
+  wQ: boolean;
+  bK: boolean;
+  bQ: boolean;
+}
 
-  a7: { type: 'p', color: 'b' },
-  b7: { type: 'p', color: 'b' },
-  c7: { type: 'p', color: 'b' },
-  d7: { type: 'p', color: 'b' },
-  e7: { type: 'p', color: 'b' },
-  f7: { type: 'p', color: 'b' },
-  g7: { type: 'p', color: 'b' },
-  h7: { type: 'p', color: 'b' },
+/**
+ * A complete position: everything needed to determine the legal moves, and
+ * nothing more. The fields are exactly the six of a FEN record, which is not a
+ * coincidence — `parseFen`/`toFen` in `@chess/rules` are the two directions of
+ * the same mapping.
+ *
+ * A bare board cannot express castling rights or an en-passant target, and both
+ * change which moves are legal, so a board on its own is not a position.
+ */
+export interface Position {
+  board: Board;
+  turn: PieceColor;
+  castling: CastlingRights;
+  /** The square a double-stepping pawn skipped over, not the pawn's square. */
+  epTarget: Square | null;
+  /** Plies since the last capture or pawn move. 100 is the fifty-move draw. */
+  halfmoveClock: number;
+  /** Incremented after black moves. */
+  fullmoveNumber: number;
+}
 
-  a2: { type: 'p', color: 'w' },
-  b2: { type: 'p', color: 'w' },
-  c2: { type: 'p', color: 'w' },
-  d2: { type: 'p', color: 'w' },
-  e2: { type: 'p', color: 'w' },
-  f2: { type: 'p', color: 'w' },
-  g2: { type: 'p', color: 'w' },
-  h2: { type: 'p', color: 'w' },
+/** What a pawn may become. A king is not a choice, and neither is a pawn. */
+export type PromotionPiece = 'q' | 'r' | 'b' | 'n';
 
-  a1: { type: 'r', color: 'w' },
-  b1: { type: 'n', color: 'w' },
-  c1: { type: 'b', color: 'w' },
-  d1: { type: 'q', color: 'w' },
-  e1: { type: 'k', color: 'w' },
-  f1: { type: 'b', color: 'w' },
-  g1: { type: 'n', color: 'w' },
-  h1: { type: 'r', color: 'w' },
-};
+/**
+ * What happened, for the caller's benefit. `capture` and `ep` are disjoint;
+ * `promotion` combines with either `quiet` or `capture`.
+ */
+export type MoveFlag =
+  'quiet' | 'capture' | 'double-push' | 'ep' | 'castle-k' | 'castle-q' | 'promotion';
+
+/**
+ * A move, not merely a destination: promotion needs a chosen piece, and the UI
+ * needs to know whether a square is a capture without diffing two boards.
+ */
+export interface Move {
+  from: Square;
+  to: Square;
+  piece: PieceType;
+  /** The type taken, including the pawn taken en passant. */
+  captured?: PieceType;
+  promotion?: PromotionPiece;
+  flags: MoveFlag[];
+}

@@ -19,7 +19,8 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
     "typecheck": "tsc -p tsconfig.check.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:perft": "vitest run --config vitest.perft.config.ts"
   },
   "dependencies": {
     "@chess/shared": "workspace:*"

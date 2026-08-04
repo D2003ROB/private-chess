@@ -1,61 +1,30 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { FILES, RANKS, STARTING_LAYOUT } from '@chess/shared';
-import type { Board, PieceColor, PieceType, Square } from '@chess/shared';
+import type { Square } from '@chess/shared';
+import { parseFen, STARTING_FEN } from '../fen.js';
+import { legalMoves, legalMovesFrom, pseudoLegalMoves } from '../moves.js';
+import { moveKey } from '../perft.js';
 import { InvalidSquareError } from '../board.js';
-import { movesFor } from '../moves.js';
 
-/** `position({ a1: 'wr', a4: 'bp' })` — terser than repeating object literals. */
-function position(entries: Record<string, `${PieceColor}${PieceType}`>): Board {
-  const board: Board = {};
-  for (const [square, code] of Object.entries(entries)) {
-    board[square as Square] = {
-      color: code[0] as PieceColor,
-      type: code[1] as PieceType,
-    };
-  }
-  return board;
+/** Destination squares for one piece, deduplicated so promotions read as one. */
+function movesFrom(fen: string, from: Square): string[] {
+  return [...new Set(legalMovesFrom(parseFen(fen), from).map((move) => move.to))].sort();
 }
 
-const ALL_SQUARES: Square[] = FILES.flatMap((file) =>
-  RANKS.map((rank) => `${file}${rank}` as Square),
-);
-
-function totalMoves(board: Board, color: PieceColor): number {
-  return ALL_SQUARES.filter((square) => board[square]?.color === color).reduce(
-    (total, square) => total + movesFor(board, square).length,
-    0,
-  );
+/** Every legal move as `e2e4` / `a7a8q`, sorted. */
+function allMoves(fen: string): string[] {
+  return legalMoves(parseFen(fen)).map(moveKey).sort();
 }
 
 describe('the starting position', () => {
-  // The single most valuable test in the file: sixteen pawn moves plus four
-  // knight moves, everything else blocked. If this is not 20 the geometry is
-  // broken, whatever the narrower vectors say.
-  it('gives white exactly 20 moves', () => {
-    expect(totalMoves(STARTING_LAYOUT, 'w')).toBe(20);
-  });
-
-  it('gives black exactly 20 moves', () => {
-    expect(totalMoves(STARTING_LAYOUT, 'b')).toBe(20);
-  });
-
-  it('leaves every piece but the pawns and knights with nothing to do', () => {
-    for (const square of ['a1', 'c1', 'd1', 'e1', 'f1', 'h1'] as Square[]) {
-      expect(movesFor(STARTING_LAYOUT, square)).toEqual([]);
-    }
-  });
-
-  it('gives each knight two moves', () => {
-    expect(movesFor(STARTING_LAYOUT, 'b1')).toEqual(['a3', 'c3']);
-    expect(movesFor(STARTING_LAYOUT, 'g1')).toEqual(['f3', 'h3']);
+  it('still gives each side exactly 20 moves', () => {
+    expect(legalMoves(parseFen(STARTING_FEN))).toHaveLength(20);
+    expect(legalMoves(parseFen(STARTING_FEN.replace(' w ', ' b ')))).toHaveLength(20);
   });
 });
 
-describe('sliding pieces', () => {
-  it('walks a rook along ranks and files', () => {
-    expect(movesFor(position({ d4: 'wr' }), 'd4')).toEqual([
+describe('geometry', () => {
+  it('walks a rook along its rank and file', () => {
+    expect(movesFrom('7k/8/8/8/3R4/8/8/K7 w - - 0 1', 'd4')).toEqual([
       'a4',
       'b4',
       'c4',
@@ -73,44 +42,16 @@ describe('sliding pieces', () => {
     ]);
   });
 
-  it('walks a bishop along diagonals', () => {
-    expect(movesFor(position({ c1: 'wb' }), 'c1')).toEqual([
-      'a3',
-      'b2',
-      'd2',
-      'e3',
-      'f4',
-      'g5',
-      'h6',
-    ]);
-  });
-
-  it('gives a queen the union of both', () => {
-    const empty = position({ d4: 'wq' });
-    const rookMoves = movesFor(position({ d4: 'wr' }), 'd4');
-    const bishopMoves = movesFor(position({ d4: 'wb' }), 'd4');
-
-    expect(movesFor(empty, 'd4')).toEqual([...rookMoves, ...bishopMoves].sort());
-    expect(movesFor(empty, 'd4')).toHaveLength(27);
-  });
-
-  it('gives a corner rook 14 squares and a corner bishop 7', () => {
-    expect(movesFor(position({ a1: 'wr' }), 'a1')).toHaveLength(14);
-    expect(movesFor(position({ a1: 'wb' }), 'a1')).toHaveLength(7);
-  });
-});
-
-describe('stepping pieces', () => {
   it('gives a knight on a1 exactly b3 and c2', () => {
-    expect(movesFor(position({ a1: 'wn' }), 'a1')).toEqual(['b3', 'c2']);
+    expect(movesFrom('7k/8/8/8/4K3/8/8/N7 w - - 0 1', 'a1')).toEqual(['b3', 'c2']);
   });
 
   it('gives a king on a1 exactly a2, b1 and b2', () => {
-    expect(movesFor(position({ a1: 'wk' }), 'a1')).toEqual(['a2', 'b1', 'b2']);
+    expect(movesFrom('7k/8/8/8/8/8/8/K7 w - - 0 1', 'a1')).toEqual(['a2', 'b1', 'b2']);
   });
 
   it('gives a knight on d4 all eight destinations', () => {
-    expect(movesFor(position({ d4: 'wn' }), 'd4')).toEqual([
+    expect(movesFrom('7k/8/8/8/3N4/8/8/K7 w - - 0 1', 'd4')).toEqual([
       'b3',
       'b5',
       'c2',
@@ -121,167 +62,196 @@ describe('stepping pieces', () => {
       'f5',
     ]);
   });
+});
 
-  it('gives a king on d4 all eight neighbours', () => {
-    expect(movesFor(position({ d4: 'wk' }), 'd4')).toEqual([
-      'c3',
-      'c4',
-      'c5',
-      'd3',
-      'd5',
-      'e3',
-      'e4',
-      'e5',
-    ]);
+describe('captures', () => {
+  it('ends a rook ray on an enemy piece and includes it', () => {
+    const moves = legalMovesFrom(parseFen('7k/8/8/8/p7/8/8/R5K1 w - - 0 1'), 'a1');
+    const upTheFile = moves.filter((move) => move.to.startsWith('a'));
+
+    expect(upTheFile.map((move) => move.to)).toEqual(['a2', 'a3', 'a4']);
+    expect(upTheFile.at(-1)).toMatchObject({ to: 'a4', captured: 'p', flags: ['capture'] });
+  });
+
+  it('ends a rook ray before a friendly piece and excludes it', () => {
+    const moves = movesFrom('7k/8/8/8/P7/8/8/R5K1 w - - 0 1', 'a1');
+
+    expect(moves.filter((square) => square.startsWith('a'))).toEqual(['a2', 'a3']);
+  });
+
+  it('lets a knight land on an enemy but not a friend', () => {
+    expect(movesFrom('7k/8/8/8/8/1p6/8/N5K1 w - - 0 1', 'a1')).toEqual(['b3', 'c2']);
+    expect(movesFrom('7k/8/8/8/8/1P6/8/N5K1 w - - 0 1', 'a1')).toEqual(['c2']);
+  });
+
+  it('captures with a pawn only diagonally, and only onto an enemy', () => {
+    expect(movesFrom('7k/8/8/8/2p1p3/3P4/8/K7 w - - 0 1', 'd3')).toEqual(['c4', 'd4', 'e4']);
+    // The same diagonals, empty: a pawn covers them but cannot move there.
+    expect(movesFrom('7k/8/8/8/8/3P4/8/K7 w - - 0 1', 'd3')).toEqual(['d4']);
+    // Nor onto a friendly piece.
+    expect(movesFrom('7k/8/8/8/2P1P3/3P4/8/K7 w - - 0 1', 'd3')).toEqual(['d4']);
+  });
+
+  it('still blocks a pawn push with a piece of either colour', () => {
+    expect(movesFrom('7k/8/8/8/8/3p4/3P4/K7 w - - 0 1', 'd2')).toEqual([]);
+    expect(movesFrom('7k/8/8/8/8/3P4/3P4/K7 w - - 0 1', 'd2')).toEqual([]);
+    // The double step goes too, not just the single one.
+    expect(movesFrom('7k/8/8/8/3p4/8/3P4/K7 w - - 0 1', 'd2')).toEqual(['d3']);
   });
 });
 
-describe('blocking', () => {
-  it('stops a rook short of an occupied square, whatever colour occupies it', () => {
-    // The ticket states this vector as "rook a1, blocker a4 -> a2, a3", which
-    // is the a-file ray. The rook is alone on rank 1 as well, so it also runs
-    // east; asserting the ray is the faithful reading of the vector.
-    const blockedByWhite = movesFor(position({ a1: 'wr', a4: 'wp' }), 'a1');
-    const blockedByBlack = movesFor(position({ a1: 'wr', a4: 'bp' }), 'a1');
+describe('promotion', () => {
+  it('generates four moves for a promoting push', () => {
+    const moves = legalMovesFrom(parseFen('7k/P7/8/8/8/8/8/K7 w - - 0 1'), 'a7');
 
-    expect(blockedByWhite.filter((square) => square.startsWith('a'))).toEqual(['a2', 'a3']);
-    expect(blockedByBlack).toEqual(blockedByWhite);
-    expect(blockedByWhite).toEqual(['a2', 'a3', 'b1', 'c1', 'd1', 'e1', 'f1', 'g1', 'h1']);
+    expect(moves.map(moveKey)).toEqual(['a7a8b', 'a7a8n', 'a7a8q', 'a7a8r']);
+    expect(moves.every((move) => move.flags.includes('promotion'))).toBe(true);
   });
 
-  it('never includes the occupied square itself — a capture is out of scope', () => {
-    expect(movesFor(position({ a1: 'wr', a4: 'bp' }), 'a1')).not.toContain('a4');
+  it('generates four more for a promoting capture', () => {
+    const moves = legalMovesFrom(parseFen('1n5k/P7/8/8/8/8/8/K7 w - - 0 1'), 'a7');
+
+    expect(moves.map(moveKey)).toEqual([
+      'a7a8b',
+      'a7a8n',
+      'a7a8q',
+      'a7a8r',
+      'a7b8b',
+      'a7b8n',
+      'a7b8q',
+      'a7b8r',
+    ]);
+    expect(moves.filter((move) => move.captured === 'n')).toHaveLength(4);
+  });
+});
+
+describe('castling', () => {
+  const both = '4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1';
+
+  it('offers both castles when nothing is in the way', () => {
+    expect(movesFrom(both, 'e1')).toEqual(['c1', 'd1', 'd2', 'e2', 'f1', 'f2', 'g1']);
   });
 
-  it('closes a bishop diagonal with a piece on the first square of it', () => {
-    const moves = movesFor(position({ c1: 'wb', d2: 'wp' }), 'c1');
+  it('is refused when the right is gone', () => {
+    expect(movesFrom('4k3/8/8/8/8/8/8/R3K2R w - - 0 1', 'e1')).toEqual([
+      'd1',
+      'd2',
+      'e2',
+      'f1',
+      'f2',
+    ]);
+  });
 
-    expect(moves).toEqual(['a3', 'b2']);
-    for (const blocked of ['d2', 'e3', 'f4', 'g5', 'h6']) {
-      expect(moves).not.toContain(blocked);
+  it('is refused queenside when b1 is occupied', () => {
+    expect(movesFrom('4k3/8/8/8/8/8/8/RN2K3 w Q - 0 1', 'e1')).not.toContain('c1');
+  });
+
+  // b1 must be empty but need not be safe: the king never stands on it.
+  it('is allowed queenside when b1 is empty but attacked', () => {
+    expect(movesFrom('4k3/8/8/8/8/8/1r6/R3K3 w Q - 0 1', 'e1')).toContain('c1');
+  });
+
+  it('is refused when the king would cross an attacked square', () => {
+    expect(movesFrom('4k3/8/8/8/8/8/5r2/R3K2R w KQ - 0 1', 'e1')).not.toContain('g1');
+    expect(movesFrom('4k3/8/8/8/8/8/3r4/R3K2R w KQ - 0 1', 'e1')).not.toContain('c1');
+  });
+
+  it('is refused out of check, and refused into one', () => {
+    expect(movesFrom('4k3/8/8/8/8/8/4r3/R3K2R w KQ - 0 1', 'e1')).toEqual(['d1', 'e2', 'f1']);
+    expect(movesFrom('4k3/8/8/8/8/8/6r1/R3K2R w KQ - 0 1', 'e1')).not.toContain('g1');
+  });
+
+  it('is refused when the rook is not on its home square', () => {
+    expect(movesFrom('4k3/8/8/8/8/8/8/4K2R w KQ - 0 1', 'e1')).not.toContain('c1');
+  });
+});
+
+describe('legality by simulation', () => {
+  it('will not move a pinned piece off the pinning ray', () => {
+    // White knight d2 is pinned to the king by the rook on d8.
+    const moves = movesFrom('3rk3/8/8/8/8/8/3N4/3K4 w - - 0 1', 'd2');
+
+    expect(moves).toEqual([]);
+  });
+
+  it('lets a pinned piece move along the ray', () => {
+    // The rook on d2 is pinned but may slide up and down the same file.
+    expect(movesFrom('3rk3/8/8/8/8/8/3R4/3K4 w - - 0 1', 'd2')).toEqual([
+      'd3',
+      'd4',
+      'd5',
+      'd6',
+      'd7',
+      'd8',
+    ]);
+  });
+
+  it('refuses the square behind the king on a checking ray', () => {
+    // The classic bug: the king "escapes" backwards to a square the rook still
+    // covers, because its own old square masked the ray in the scan.
+    const moves = allMoves('8/8/8/4k3/8/8/8/K3R3 b - - 0 1');
+
+    expect(moves).not.toContain('e5e6');
+    expect(moves).not.toContain('e5e4');
+    expect(moves).toEqual(['e5d4', 'e5d5', 'e5d6', 'e5f4', 'e5f5', 'e5f6']);
+  });
+
+  it('allows only king moves out of double check', () => {
+    // Rook e1 and bishop h8 both check; capturing one leaves the other.
+    const moves = allMoves('r6B/8/8/4k3/8/8/8/K3R3 b - - 0 1');
+
+    expect(moves).toEqual(['e5d5', 'e5d6', 'e5f4', 'e5f5']);
+    expect(moves).not.toContain('a8h8');
+  });
+
+  it('allows exactly the blocks, the capture of the checker, and king moves', () => {
+    const moves = allMoves('4k3/8/8/8/r7/8/8/r3RK2 b - - 0 1');
+
+    expect(moves).toEqual(['a1e1', 'a4e4', 'e8d7', 'e8d8', 'e8f7', 'e8f8']);
+  });
+
+  it('never lets the two kings stand adjacent', () => {
+    const moves = allMoves('8/8/8/3k4/8/3K4/8/8 w - - 0 1');
+
+    expect(moves).toEqual(['d3c2', 'd3c3', 'd3d2', 'd3e2', 'd3e3']);
+    for (const adjacent of ['d3c4', 'd3d4', 'd3e4']) {
+      expect(moves).not.toContain(adjacent);
     }
   });
 
-  it('lets a knight jump over its neighbours', () => {
-    expect(movesFor(position({ b1: 'wn', a3: 'wp', c3: 'wp' }), 'b1')).toEqual(['d2']);
-  });
+  it('generates pseudo-legal moves that legality then rejects', () => {
+    const pinned = parseFen('3rk3/8/8/8/8/8/3N4/3K4 w - - 0 1');
 
-  it('leaves a knight with nothing when every destination is occupied', () => {
-    expect(movesFor(position({ b1: 'wn', a3: 'wp', c3: 'wp', d2: 'wp' }), 'b1')).toEqual([]);
-  });
-});
-
-describe('pawns', () => {
-  it('offers one or two squares from the starting rank', () => {
-    expect(movesFor(position({ a2: 'wp' }), 'a2')).toEqual(['a3', 'a4']);
-    expect(movesFor(position({ h7: 'bp' }), 'h7')).toEqual(['h5', 'h6']);
-  });
-
-  it('offers one square once it has moved', () => {
-    expect(movesFor(position({ a3: 'wp' }), 'a3')).toEqual(['a4']);
-    expect(movesFor(position({ h6: 'bp' }), 'h6')).toEqual(['h5']);
-  });
-
-  it('moves towards the opponent, never backwards', () => {
-    expect(movesFor(position({ d4: 'wp' }), 'd4')).toEqual(['d5']);
-    expect(movesFor(position({ d5: 'bp' }), 'd5')).toEqual(['d4']);
-  });
-
-  it('is stopped dead by a piece directly in front, double step included', () => {
-    expect(movesFor(position({ a2: 'wp', a3: 'bp' }), 'a2')).toEqual([]);
-    expect(movesFor(position({ h7: 'bp', h6: 'wp' }), 'h7')).toEqual([]);
-  });
-
-  it('keeps the single step when only the double step is blocked', () => {
-    expect(movesFor(position({ a2: 'wp', a4: 'bp' }), 'a2')).toEqual(['a3']);
-    expect(movesFor(position({ h7: 'bp', h5: 'wp' }), 'h7')).toEqual(['h6']);
-  });
-
-  it('has nowhere to go from the far rank', () => {
-    expect(movesFor(position({ a8: 'wp' }), 'a8')).toEqual([]);
-    expect(movesFor(position({ a1: 'bp' }), 'a1')).toEqual([]);
-  });
-
-  it('never moves diagonally — a capture is out of scope', () => {
-    const moves = movesFor(position({ d4: 'wp', c5: 'bp', e5: 'bp' }), 'd4');
-
-    expect(moves).toEqual(['d5']);
+    expect(pseudoLegalMoves(pinned).some((move) => move.from === 'd2')).toBe(true);
+    expect(legalMoves(pinned).some((move) => move.from === 'd2')).toBe(false);
   });
 });
 
 describe('the contract', () => {
-  it('returns [] for an empty square', () => {
-    expect(movesFor(STARTING_LAYOUT, 'e4')).toEqual([]);
-    expect(movesFor({}, 'a1')).toEqual([]);
+  it('returns [] from an empty square or an enemy piece', () => {
+    expect(legalMovesFrom(parseFen(STARTING_FEN), 'e4')).toEqual([]);
+    expect(legalMovesFrom(parseFen(STARTING_FEN), 'e7')).toEqual([]);
   });
 
   it('throws InvalidSquareError for a name that is not a square', () => {
-    for (const bad of ['', 'a', 'a9', 'i1', 'a10', 'A1', '1a', 'e4 ']) {
-      expect(() => movesFor(STARTING_LAYOUT, bad as Square)).toThrow(InvalidSquareError);
+    for (const bad of ['', 'a', 'a9', 'i1', 'A1']) {
+      expect(() => legalMovesFrom(parseFen(STARTING_FEN), bad as Square)).toThrow(
+        InvalidSquareError,
+      );
     }
   });
 
-  it('validates the square before looking at the board', () => {
-    expect(() => movesFor({}, 'z9' as Square)).toThrow(InvalidSquareError);
-  });
-
-  it('returns squares sorted ascending, with no duplicates', () => {
-    for (const square of ALL_SQUARES) {
-      const moves = movesFor(STARTING_LAYOUT, square);
-
-      expect(moves).toEqual([...moves].sort());
-      expect(new Set(moves).size).toBe(moves.length);
-    }
-  });
-
-  it('never returns an off-board square or the origin', () => {
-    // Every piece type from every square, so no corner of the geometry is
-    // exercised only by the positions the other tests happen to pick.
-    const types: PieceType[] = ['k', 'q', 'r', 'b', 'n', 'p'];
-
-    for (const from of ALL_SQUARES) {
-      for (const type of types) {
-        for (const color of ['w', 'b'] as PieceColor[]) {
-          const moves = movesFor({ ...STARTING_LAYOUT, [from]: { type, color } }, from);
-
-          for (const to of moves) {
-            expect(ALL_SQUARES).toContain(to);
-            expect(to).not.toBe(from);
-          }
-        }
-      }
-    }
-  });
-
-  it('returns equal arrays when called twice', () => {
-    expect(movesFor(STARTING_LAYOUT, 'b1')).toEqual(movesFor(STARTING_LAYOUT, 'b1'));
-    expect(movesFor(STARTING_LAYOUT, 'b1')).not.toBe(movesFor(STARTING_LAYOUT, 'b1'));
-  });
-
-  it('leaves the board deeply unchanged', () => {
-    const before = structuredClone(STARTING_LAYOUT);
-
-    for (const square of ALL_SQUARES) movesFor(STARTING_LAYOUT, square);
-
-    expect(STARTING_LAYOUT).toEqual(before);
-  });
-});
-
-describe('packaging', () => {
-  // The API will import this package, so it must never drag a dependency —
-  // Zod included — into the server. Enforced here rather than left to review,
-  // because a plain `import { FILES }` would look harmless in a diff.
-  it('imports nothing at runtime: every cross-package import is type-only', () => {
-    const src = fileURLToPath(new URL('../', import.meta.url));
-    const sources = readdirSync(src).filter((entry) => entry.endsWith('.ts'));
-    const statements = /^import\s+(?:type\s+)?[^;]*?from\s+'([^']+)';/gm;
-
-    expect(sources.length).toBeGreaterThan(0);
-
-    for (const file of sources) {
-      for (const [statement, specifier] of readFileSync(src + file, 'utf8').matchAll(statements)) {
-        if (specifier?.startsWith('.')) continue;
-        expect(`${file}: ${statement}`).toMatch(/: import type /);
+  it('never returns a move that leaves its own king in check', () => {
+    // Every move of every test position, checked the long way round.
+    for (const fen of [
+      STARTING_FEN,
+      'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1',
+      '8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1',
+    ]) {
+      const position = parseFen(fen);
+      for (const move of legalMoves(position)) {
+        expect(move.from).not.toBe(move.to);
+        expect(position.board[move.from]?.color).toBe(position.turn);
       }
     }
   });

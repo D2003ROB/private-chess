@@ -1,0 +1,76 @@
+/* The hot-seat board. Markers live in the board's overlay layer, positioned
+   against the same 8x8 grid as the pieces, so nothing here can reflow squares. */
+
+.game {
+  position: relative;
+}
+
+.game__status {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  min-height: 1.5em;
+}
+
+.game__marker {
+  position: absolute;
+  width: 12.5%;
+  height: 12.5%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.game__marker--move::after {
+  content: '';
+  width: 32%;
+  height: 32%;
+  border-radius: 50%;
+  background: rgb(20 20 20 / 40%);
+}
+
+/* A ring rather than a dot: the piece underneath stays visible. */
+.game__marker--capture::after {
+  content: '';
+  width: 84%;
+  height: 84%;
+  border-radius: 50%;
+  border: 6% solid rgb(20 20 20 / 40%);
+  box-sizing: border-box;
+}
+
+.game__marker--selected {
+  background: rgb(255 220 90 / 45%);
+}
+
+.game__promotion {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 12.5%;
+  margin-inline: auto;
+  width: max-content;
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.4rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 25%);
+}
+
+.game__promotion-choice {
+  width: 3rem;
+  height: 3rem;
+  padding: 0.25rem;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.game__promotion-choice:hover,
+.game__promotion-choice:focus-visible {
+  border-color: var(--border);
+  background: #f0f0f0;
+}
