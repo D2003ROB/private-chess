@@ -1,14 +1,12 @@
+import type { PieceColor, PieceType } from '@chess/shared';
 import type { ReactElement, SVGProps } from 'react';
 import type { PieceSetId } from './pieceSets';
 
-export type PieceType = 'k' | 'q' | 'r' | 'b' | 'n' | 'p';
-export type PieceColor = 'w' | 'b';
-
-/** A piece as it appears in a position map: what it is and whose it is. */
-export interface PieceRef {
-  type: PieceType;
-  color: PieceColor;
-}
+/**
+ * Artwork-side types only. What a piece *is* — `PieceType`, `PieceColor`,
+ * `Piece`, `Board` — lives in `@chess/shared`, because `@chess/rules` and the
+ * API need the same vocabulary and cannot import from `apps/`.
+ */
 
 /** Key into a set's component map, e.g. `wn` for the white knight. */
 export type PieceKey = `${PieceColor}${PieceType}`;

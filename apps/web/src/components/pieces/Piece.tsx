@@ -1,5 +1,6 @@
+import type { PieceColor, PieceType } from '@chess/shared';
 import { DEFAULT_PIECE_SET_ID, getPieceSet } from './pieceSets';
-import type { PieceColor, PieceProps, PieceType } from './types';
+import type { PieceProps } from './types';
 
 const TYPE_NAMES: Record<PieceType, string> = {
   k: 'king',

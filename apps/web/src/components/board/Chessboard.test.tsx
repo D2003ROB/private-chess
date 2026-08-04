@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { STARTING_LAYOUT } from '@chess/shared';
 import { Chessboard } from './Chessboard';
 import { BOARD_THEMES } from './themes';
 
@@ -117,5 +119,48 @@ describe('board themes', () => {
     const root = container.querySelector<HTMLElement>('.chessboard');
     expect(root?.style.getPropertyValue('--board-light')).toBe('#232946');
     expect(root?.style.getPropertyValue('--board-dark-coord')).toBe('#7DF9E1');
+  });
+});
+
+describe('Chessboard square clicks', () => {
+  it('reports the square that was clicked, whichever way the board faces', async () => {
+    const user = userEvent.setup();
+    const clicked: string[] = [];
+    const { container, rerender } = render(
+      <Chessboard onSquareClick={(square) => clicked.push(square)} />,
+    );
+
+    const click = async (square: string) => {
+      const cell = container.querySelector(`[data-square="${square}"]`);
+      if (cell) await user.click(cell);
+    };
+
+    await click('a1');
+    await click('h8');
+    rerender(<Chessboard orientation="black" onSquareClick={(square) => clicked.push(square)} />);
+    await click('a1');
+
+    expect(clicked).toEqual(['a1', 'h8', 'a1']);
+  });
+
+  it('reports the square under a piece, not nothing', async () => {
+    const user = userEvent.setup();
+    const clicked: string[] = [];
+    const { container } = render(
+      <Chessboard pieces={STARTING_LAYOUT} onSquareClick={(square) => clicked.push(square)} />,
+    );
+
+    const cell = container.querySelector('[data-square="e1"]');
+    if (cell) await user.click(cell);
+
+    expect(clicked).toEqual(['e1']);
+  });
+
+  it('is inert without the callback', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Chessboard />);
+    const cell = container.querySelector('[data-square="a1"]');
+
+    await expect(cell ? user.click(cell) : Promise.resolve()).resolves.not.toThrow();
   });
 });

@@ -35,6 +35,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@chess/rules':
+        specifier: workspace:*
+        version: link:../../packages/rules
       '@chess/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -69,6 +72,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@chess/rules':
+        specifier: workspace:*
+        version: link:../../packages/rules
       '@chess/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -118,6 +124,19 @@ importers:
       vite:
         specifier: ^7.1.11
         version: 7.3.6(@types/node@22.20.1)(jiti@2.7.0)(tsx@4.23.4)
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@27.4.0)(tsx@4.23.4)
+
+  packages/rules:
+    dependencies:
+      '@chess/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@27.4.0)(tsx@4.23.4)

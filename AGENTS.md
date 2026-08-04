@@ -4,7 +4,7 @@ Orientation for AI agents (and humans) working in this repository. Read this bef
 If you change something this file describes, **update this file in the same commit** — see
 [Keeping this file honest](#keeping-this-file-honest).
 
-Last verified against commit: the CHESS-1 skeleton.
+Last verified against commit: the CHESS-4 movement rules.
 
 ---
 
@@ -12,7 +12,7 @@ Last verified against commit: the CHESS-1 skeleton.
 
 A full-stack skeleton for a chess application: React UI → Fastify API → Postgres.
 
-**There is still no chess in it.** No rules, no legal-move generation, no pieces, no engine, no
+**There is barely any chess in it.** No captures, no check, no legality, no engine, no
 authentication, no websockets. What exists is:
 
 - a thin vertical slice — create and list game records — proving every layer is wired together
@@ -20,10 +20,12 @@ authentication, no websockets. What exists is:
 - a presentational chessboard at `/board`: squares, coordinates and 10 themes, holding no game
   state (CHESS-2);
 - the Meridian piece set — twelve vector pieces drawn from scratch — rendered on the board from a
-  static `STARTING_LAYOUT` map (CHESS-3). Nothing moves.
+  static `STARTING_LAYOUT` map (CHESS-3);
+- `@chess/rules`: quiet move generation for the six piece types — the geometry of movement and
+  nothing else (CHESS-4). Still nothing moves; `/board` only draws dots where a piece could go.
 
-Treat that as deliberate. If a task asks you to add chess logic, it is new work under a new
-ticket, not a gap to quietly fill.
+Treat that as deliberate. If a task asks you to add chess logic beyond movement geometry, it is
+new work under a new ticket, not a gap to quietly fill.
 
 ## 2. Stack (locked)
 
@@ -80,30 +82,36 @@ library. The styling is intentionally plain CSS in one stylesheet.
 │           │   ├── Chessboard.tsx
 │           │   ├── Chessboard.css
 │           │   ├── themes.ts     # the 10-theme registry
-│           │   ├── types.ts      # BoardTheme, Square, component props
+│           │   ├── types.ts      # BoardTheme and component props
 │           │   └── index.ts      # public exports
 │           ├── components/pieces/ # the piece set (see §4b)
 │           │   ├── sets/meridian/ # 12 components + manifest + README
 │           │   ├── Piece.tsx     # dispatcher — never draws
 │           │   ├── pieceSets.ts  # registry, mirrors themes.ts
-│           │   ├── startingLayout.ts
-│           │   ├── types.ts
+│           │   ├── types.ts      # artwork-side types only
 │           │   └── index.ts
 │           ├── pages/GamesPage.tsx         # route /
-│           ├── pages/BoardPage.tsx         # route /board — board demo + picker
+│           ├── pages/BoardPage.tsx         # route /board — demo, picker, move inspector
 │           ├── test/setup.ts     # jest-dom + cleanup
 │           └── styles.css        # global styles + site nav
 ├── packages/
-│   └── shared/src/
-│       ├── game.ts               # game + create-input schemas, GameStatus
-│       ├── http.ts               # health + error-envelope schemas
-│       └── index.ts              # re-exports
+│   ├── shared/src/
+│   │   ├── chess.ts              # Square, Piece, Board, STARTING_LAYOUT — no Zod
+│   │   ├── game.ts               # game + create-input schemas, GameStatus
+│   │   ├── http.ts               # health + error-envelope schemas
+│   │   └── index.ts              # re-exports
+│   └── rules/src/                # movement geometry (see §4c)
+│       ├── board.ts              # square <-> coordinates, bounds, InvalidSquareError
+│       ├── offsets.ts            # direction vectors per piece type
+│       ├── moves.ts              # movesFor() and the one ray-walker behind it
+│       ├── index.ts
+│       └── __tests__/moves.test.ts
 ├── docker-compose.yml            # Postgres 16
 ├── tsconfig.base.json            # strict flags inherited by every workspace
 └── eslint.config.js              # single flat config for the whole repo
 ```
 
-Workspace names: `@chess/api`, `@chess/web`, `@chess/shared`. Filter with
+Workspace names: `@chess/api`, `@chess/web`, `@chess/shared`, `@chess/rules`. Filter with
 `pnpm --filter @chess/api <script>`.
 
 ## 4. How the layers connect
@@ -125,6 +133,11 @@ GamesPage.tsx
 
 **`packages/shared` is the contract.** Both sides validate against the same Zod schemas, so a
 change there is a change to the API contract. Never duplicate a schema on one side.
+
+It also holds the chess vocabulary — `Square`, `PieceType`, `PieceColor`, `Piece`, `Board`,
+`STARTING_LAYOUT` — in `chess.ts`, which imports nothing at all. `@chess/rules` reads those types
+and must stay free of anything that emits JavaScript, so **do not add a Zod schema or any other
+import to `chess.ts`**; put it in a sibling file.
 
 ### Invariants — break these and things quietly rot
 
@@ -167,7 +180,13 @@ it holds no state, knows nothing about pieces or rules, and makes no API calls. 
   resolve an aspect-ratio-derived height and the board overflows it.
 - **Labels size in `cqw`** against the board's own container, so they scale with the board and
   never with the viewport.
-- **The `children` overlay layer exists for pieces** to mount into later. Keep it.
+- **The `children` overlay layer exists for pieces** and for anything drawn over them, such as the
+  move dots. Keep it, and keep it `pointer-events: none` — that is what lets a click on a piece
+  reach the square underneath.
+- **`onSquareClick` is the board's only concession to interaction.** One delegated listener on the
+  board root resolves the click through `closest('[data-square]')` and reports the name. The board
+  still holds no state, adds no DOM, and leaves squares `aria-hidden` under a single `role="img"`.
+  Selection lives in the caller.
 
 Coordinate labels intentionally fail WCAG 4.5:1 in 9 of 10 themes — the opposite-square rule puts
 them at roughly 2–3.5:1 by construction. They are decorative (squares are `aria-hidden`, the board
@@ -195,6 +214,9 @@ placed from a static map and nothing moves.
 - Pieces render into the board's overlay layer, positioned by grid cell, so a change to the piece
   map cannot reflow the squares.
 
+`STARTING_LAYOUT` used to live here; it is now in `@chess/shared`, because `@chess/rules` needs it
+and cannot import from `apps/`.
+
 `sets/meridian/README.md` records provenance (original work, no third-party licence) and the
 drawing rules. Read it before touching the artwork.
 
@@ -202,6 +224,36 @@ Black pieces on **Midnight** and **Neon** are carried by their light interior se
 silhouette: with the specified defaults the black outline scores 1.03–2.91:1 against those squares.
 Raised in the CHESS-3 PR. Per-theme piece tinting is a deliberate non-decision — do not add it
 without a ticket.
+
+### 4c. The movement rules (CHESS-4)
+
+`packages/rules` answers one question: given a board and a square, which squares can that piece
+move to? Nothing else.
+
+- **`movesFor(board, from)` is the only supported export.** `board.ts` and `offsets.ts` are
+  exported for tests and may change freely; a change to `movesFor` is a breaking change.
+- **Quiet moves only.** A destination must be empty. The occupied square that stops a ray is never
+  returned, whichever colour sits on it, because that would be a capture. There is no check, pin,
+  castling, en passant or promotion code — not even a stub or a commented placeholder. Adding any
+  of it is a new ticket.
+- **Zero runtime dependencies.** `@chess/shared` is a dependency for its _types_ only: every
+  cross-package import is `import type`, so nothing — Zod included — reaches the emitted
+  JavaScript. A test in `moves.test.ts` walks the sources and fails if a value import appears.
+  This is why `board.ts` repeats the `FILES`/`RANKS` arrays instead of importing them.
+- **`movesFor` is pure.** It never writes to the board, keeps no module-level state, and returns a
+  fresh array sorted ascending (`a1`…`h8`) — which is plain `.sort()`, since a rank is one digit.
+- **Six pieces, three behaviours.** One ray-walker does all of it: sliders walk seven steps,
+  kings and knights walk one, and a pawn walks one — or two from its home rank. The pawn's blocked
+  double step falls out of walking rather than being special-cased, and that is the point. If a
+  change starts growing a per-piece switch with its own bounds checks, it is going the wrong way.
+- **Bounds checking lives in `toSquare` alone.** Out-of-range coordinates miss the `FILES`/`RANKS`
+  arrays and come back `undefined`. Do not add a second `isOnBoard` test at the call sites.
+- Coordinates are plain `{ file, rank }` integer pairs, 0-7 from a1. Not 0x88, not bitboards:
+  performance is not a requirement and legibility is.
+
+`/board` renders a translucent dot on every square `movesFor` returns for the clicked piece. It is
+a review affordance for a module with no visual output of its own — not the beginning of the game
+UI, and the real interaction model may well replace it.
 
 ## 5. Commands
 
@@ -253,8 +305,15 @@ false })`, passing `createFakeDatabase()` — an in-memory `Database`. Drives it
   path.
 - **Web** (`GamesPage.test.tsx`): `vi.mock`s `../api/client`, renders inside a fresh
   `QueryClientProvider` with `retry: false`, asserts on visible text via Testing Library.
+- **Rules** (`packages/rules/src/__tests__/moves.test.ts`): pure input/output, no harness. The
+  load-bearing case is the starting position summing to exactly 20 moves a side — sixteen pawn
+  moves and four knight moves. It fails loudly and specifically whenever the geometry breaks, so
+  run it first when touching anything in that package.
 - **Add tests at the same seam.** If you need a live database for a test, you are probably reaching
   past the `Database` interface — reconsider first.
+- **`pnpm test` reads `packages/*/dist`,** because the apps and the rules tests import
+  `@chess/shared` as a built package. Build before testing — the documented order in §5 already
+  does.
 
 ## 8. Gotchas already paid for
 
@@ -279,19 +338,23 @@ Do not rediscover these:
 
 ## 9. Not implemented — separate tickets
 
-Chess rules and move validation · FEN parsing or loading an arbitrary position · click, drag, drop,
-selection or highlight behaviour · legal-move highlights, last-move or check indicators, arrows ·
-any chess engine or library (`chess.js`, Stockfish) · additional piece sets (the registry is built
-for them; do not fill it) · captured-piece trays and material counters · piece shadows, 3D, board
-perspective · authentication, users, sessions · WebSockets and real-time updates · matchmaking,
-lobbies, clocks, ratings · CI pipelines, app Dockerfiles, deployment config · sound · component
-libraries.
+Captures, check, checkmate, pins and any other legality beyond movement geometry · castling, en
+passant, promotion · turn order and whose move it is · move history, SAN, undo · FEN parsing or
+loading an arbitrary position · dragging, dropping or actually relocating a piece · last-move or
+check indicators, arrows · any chess engine or library (`chess.js`, Stockfish) · additional piece
+sets (the registry is built for them; do not fill it) · captured-piece trays and material counters
+· piece shadows, 3D, board perspective · authentication, users, sessions · WebSockets and
+real-time updates · matchmaking, lobbies, clocks, ratings · CI pipelines, app Dockerfiles,
+deployment config · sound · component libraries.
+
+Selection exists on `/board` only as the move inspector described in §4c: one selected square, no
+movement. Do not grow it into the game UI here.
 
 `GameStatus` already has `PENDING | ACTIVE | COMPLETED` and games carry two player names; that is
 the extent of the domain modelling. Extend it deliberately, with a migration.
 
-`STARTING_LAYOUT` is a literal, not parser output. When FEN parsing arrives it should produce the
-same `PiecePlacement` shape rather than replacing it.
+`STARTING_LAYOUT` is a literal in `@chess/shared`, not parser output. When FEN parsing arrives it
+should produce the same `Board` shape rather than replacing it.
 
 ## 10. Keeping this file honest
 

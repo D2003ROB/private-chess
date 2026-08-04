@@ -1,11 +1,9 @@
-import type { CSSProperties } from 'react';
+import { FILES, RANKS, type Square } from '@chess/shared';
+import type { CSSProperties, MouseEvent } from 'react';
 import { Piece } from '../pieces';
 import { getTheme, DEFAULT_THEME_ID } from './themes';
-import type { ChessboardProps, CoordinateMode, Orientation, Square, SquareColor } from './types';
+import type { ChessboardProps, CoordinateMode, Orientation, SquareColor } from './types';
 import './Chessboard.css';
-
-const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] as const;
-const RANKS = ['1', '2', '3', '4', '5', '6', '7', '8'] as const;
 
 /**
  * Maps a grid cell to the board square it shows.
@@ -47,9 +45,23 @@ export function Chessboard({
   className,
   pieces,
   pieceSet,
+  onSquareClick,
   children,
 }: ChessboardProps) {
   const activeTheme = getTheme(theme);
+
+  /**
+   * One delegated listener rather than 64 handlers: every square already
+   * carries its name, so the click is resolved by walking up to the nearest
+   * `[data-square]`. Nothing about the DOM or the accessibility tree changes —
+   * squares stay `aria-hidden` and the board stays a single `role="img"`.
+   */
+  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (!onSquareClick) return;
+    const cell = (event.target as HTMLElement).closest<HTMLElement>('[data-square]');
+    const square = cell?.dataset['square'];
+    if (square) onSquareClick(square as Square);
+  };
 
   // The five variables every square and label style reads. Switching themes is
   // this object changing — nothing else re-computes.
@@ -80,6 +92,7 @@ export function Chessboard({
         className="chessboard__board"
         role="img"
         aria-label={`Chessboard, ${orientation} at bottom`}
+        onClick={handleClick}
       >
         {cells.map((cell) => (
           <div

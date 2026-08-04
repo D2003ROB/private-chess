@@ -141,3 +141,21 @@
 .contact__cell {
   display: block;
 }
+
+/* Move inspector: one translucent dot per square `movesFor` returns. */
+.board-page__dot {
+  position: absolute;
+  width: 12.5%;
+  height: 12.5%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.board-page__dot::after {
+  content: '';
+  width: 32%;
+  height: 32%;
+  border-radius: 50%;
+  background: rgb(20 20 20 / 40%);
+}

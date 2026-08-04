@@ -18,6 +18,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@chess/rules": "workspace:*",
     "@chess/shared": "workspace:*",
     "@fastify/cors": "^11.1.0",
     "@prisma/client": "^6.19.0",
